@@ -38,7 +38,8 @@ export class LoginPageComponent {
   private readonly host = inject(ElementRef<HTMLElement>);
   private readonly fb = inject(FormBuilder).nonNullable;
 
-  protected readonly useMocks = runtimeConfig.useMocks;
+  /** La cuenta de prueba solo existe con la identidad simulada. */
+  protected readonly useMocks = !runtimeConfig.useFirebaseAuth;
   protected readonly submitted = signal(false);
   protected readonly pending = signal<'email' | 'google' | null>(null);
   protected readonly formError = signal<string | null>(null);

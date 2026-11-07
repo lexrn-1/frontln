@@ -7,6 +7,8 @@ import { routes } from './app.routes';
 import { provideAuth } from './core/auth/auth.providers';
 import { authTokenInterceptor } from './core/auth/interceptors/auth-token.interceptor';
 import { AuthStore } from './core/auth/store/auth.store';
+import { runtimeConfig } from './core/config/runtime-config';
+import { startAnalytics } from './core/firebase/firebase-app';
 import { PageTitleStrategy } from './core/layout/page-title.strategy';
 
 export const appConfig: ApplicationConfig = {
@@ -24,6 +26,9 @@ export const appConfig: ApplicationConfig = {
         const store = inject(AuthStore);
         return () => store.init();
       }
-    }
+    },
+    ...(runtimeConfig.useFirebaseAuth
+      ? [{ provide: APP_INITIALIZER, multi: true, useFactory: () => () => void startAnalytics() }]
+      : [])
   ]
 };

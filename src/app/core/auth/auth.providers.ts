@@ -7,11 +7,11 @@ import { IdentityProvider } from './services/identity-provider';
 import { MockAuthService } from './services/mock/mock-auth.service';
 import { MockIdentityProvider } from './services/mock/mock-identity.provider';
 
-/** Elige adaptadores reales o simulados según `runtimeConfig.useMocks`. */
+/** Elige adaptadores reales o simulados según `useFirebaseAuth` (identidad) y `useMocks` (API). */
 export function provideAuth(): Provider[] {
-  const mocks = runtimeConfig.useMocks;
+  const { useFirebaseAuth, useMocks } = runtimeConfig;
   return [
-    { provide: IdentityProvider, useClass: mocks ? MockIdentityProvider : FirebaseIdentityProvider },
-    { provide: AuthService, useClass: mocks ? MockAuthService : HttpAuthService }
+    { provide: IdentityProvider, useClass: useFirebaseAuth ? FirebaseIdentityProvider : MockIdentityProvider },
+    { provide: AuthService, useClass: useMocks ? MockAuthService : HttpAuthService }
   ];
 }

@@ -27,8 +27,10 @@ Rutas implementadas (plan en `docs/guia/`):
 ### Modo simulado
 
 Con `runtimeConfig.useMocks = true` la app funciona sin backend: los adaptadores de
-`core/auth/services/mock/` imitan Firebase Auth y `backend-api` y guardan los datos en
-`localStorage` (`frontmeet.mock-db.v1`; bórralo para reiniciar).
+`core/auth/services/mock/` imitan `backend-api` (y Firebase Auth si `useFirebaseAuth = false`)
+y guardan los datos en `localStorage` (`frontmeet.mock-db.v1`; bórralo para reiniciar).
+
+Con identidad simulada (`useFirebaseAuth = false`):
 
 - Cuenta de prueba: `marina.lopez@universidad.edu` / `Estudio2026`.
 - "Continuar con Google" simula un primer acceso y lleva a completar perfil.
@@ -37,9 +39,10 @@ Con `runtimeConfig.useMocks = true` la app funciona sin backend: los adaptadores
 ### Conectar el backend
 
 1. Ajusta `apiUrl` y `realtimeUrl` en `src/app/core/config/runtime-config.ts`.
-2. Instala `firebase`, completa `runtimeConfig.firebase` e implementa
-   `core/auth/services/firebase-identity.provider.ts` (el mapeo está documentado en el archivo).
-3. Pon `useMocks: false`. Componentes, store y guards no cambian.
+2. Firebase Auth ya está conectado (`useFirebaseAuth: true`, proyecto `appmeet-dev`). En la
+   consola de Firebase deben estar habilitados los proveedores *Correo/contraseña* y *Google*,
+   y el dominio de despliegue debe figurar en *Authentication → Dominios autorizados*.
+3. Pon `useMocks: false` para usar backend-api real. Componentes, store y guards no cambian.
 
 Contratos esperados de `backend-api` (sobre `ApiResponse<T>`, errores con `code`, `message`,
 `fieldErrors`, `traceId`; token `Authorization: Bearer <ID token de Firebase>`):
