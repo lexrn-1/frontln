@@ -16,6 +16,7 @@ module.exports = {
         muted: 'var(--color-muted)',
         border: 'var(--color-border)',
         'border-strong': 'var(--color-border-strong)',
+        skeleton: 'var(--color-skeleton)',
         danger: 'var(--color-danger)',
         'danger-soft': 'var(--color-danger-soft)',
         success: 'var(--color-success)',
@@ -25,14 +26,27 @@ module.exports = {
         'danger-warm': 'var(--color-danger-warm)',
         'success-muted': 'var(--color-success-muted)',
         'warning-warm': 'var(--color-warning-warm)',
-        'glow-soft': 'var(--color-glow-soft)'
+        'glow-soft': 'var(--color-glow-soft)',
+        'tile-peach': 'var(--color-tile-peach)',
+        'tile-mint': 'var(--color-tile-mint)',
+        'tile-sky': 'var(--color-tile-sky)',
+        'tile-rose': 'var(--color-tile-rose)',
+        lavender: 'var(--color-lavender)',
+        'lavender-soft': 'var(--color-lavender-soft)'
       },
       fontFamily: {
-        sans: ['Inter', 'sans-serif'],
+        sans: ['"DM Sans"', 'Inter', 'sans-serif'],
+        display: ['Manrope', '"DM Sans"', 'sans-serif'],
         mono: ['"JetBrains Mono"', 'monospace']
       },
       boxShadow: {
-        modal: '0 24px 70px rgb(20 34 28 / 24%)',
+        modal: '0 24px 70px rgb(60 40 30 / 18%)',
+        soft: 'var(--shadow-soft)',
+        raised: 'var(--shadow-raised)',
+        inset: 'var(--shadow-inset)',
+        primary: 'var(--shadow-primary)',
+        pressed: 'var(--shadow-pressed)',
+        lavender: 'var(--shadow-lavender)',
         'glow-soft': 'var(--shadow-glow-soft)'
       }
     }

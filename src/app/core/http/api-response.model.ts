@@ -10,9 +10,15 @@ export interface ApiFieldError {
   message: string;
 }
 
+/**
+ * Formato de error acordado con backend (plan de trabajo, "Contratos"):
+ * `code`, `message`, `fieldErrors` y `traceId`.
+ */
 export interface ApiErrorPayload {
   success: false;
+  code: string;
   message: string;
-  errors?: ApiFieldError[];
+  fieldErrors?: ApiFieldError[];
+  traceId?: string;
   timestamp: string;
 }

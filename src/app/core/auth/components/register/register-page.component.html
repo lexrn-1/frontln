@@ -1,0 +1,174 @@
+<app-auth-page
+  eyebrow="Únete a StudyRoom"
+  heading="Crea tu espacio de estudio"
+  subheading="Empieza gratis. Sin tarjeta de crédito."
+>
+  <button type="button" class="btn-ghost w-full" [disabled]="pending() !== null" (click)="google()">
+    @if (pending() === 'google') {
+      <app-spinner />
+      <span>Conectando con Google…</span>
+    } @else {
+      <app-google-mark />
+      <span>Continuar con Google</span>
+    }
+  </button>
+
+  <div class="my-5 flex items-center gap-3 text-xs text-muted" aria-hidden="true">
+    <span class="neu-groove flex-1"></span>
+    o continúa con tu correo
+    <span class="neu-groove flex-1"></span>
+  </div>
+
+  <div aria-live="assertive" aria-atomic="true">
+    @if (formError()) {
+      <div role="alert" class="mb-4 flex items-start gap-2 rounded-xl bg-danger-soft px-3.5 py-3 text-sm text-danger">
+        <app-icon name="error" [size]="18" class="mt-px" />
+        <span>{{ formError() }}</span>
+      </div>
+    }
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate class="space-y-4" aria-label="Formulario de registro">
+    <div class="grid gap-4 sm:grid-cols-2">
+      <app-form-field label="Nombres" forId="reg-nombres" [error]="error('nombres')">
+        <app-text-input
+          inputId="reg-nombres"
+          formControlName="nombres"
+          icon="person"
+          placeholder="Ej. Marina"
+          autocomplete="given-name"
+          [required]="true"
+          [maxlength]="60"
+          [invalid]="!!error('nombres')"
+          [describedBy]="error('nombres') ? 'reg-nombres-error' : null"
+        />
+      </app-form-field>
+      <app-form-field label="Apellidos" forId="reg-apellidos" [error]="error('apellidos')">
+        <app-text-input
+          inputId="reg-apellidos"
+          formControlName="apellidos"
+          placeholder="Ej. López"
+          autocomplete="family-name"
+          [required]="true"
+          [maxlength]="60"
+          [invalid]="!!error('apellidos')"
+          [describedBy]="error('apellidos') ? 'reg-apellidos-error' : null"
+        />
+      </app-form-field>
+    </div>
+
+    <app-form-field
+      label="Nombre de usuario"
+      forId="reg-username"
+      [error]="error('username')"
+      [hint]="usernameState() === 'checking' ? 'Comprobando disponibilidad…' : usernameState() === 'available' ? 'Disponible ✓' : 'Así te verán en las salas.'"
+    >
+      <app-text-input
+        inputId="reg-username"
+        formControlName="username"
+        icon="alternate_email"
+        placeholder="marina.lopez"
+        autocomplete="username"
+        [required]="true"
+        [maxlength]="20"
+        [invalid]="!!error('username')"
+        [describedBy]="error('username') ? 'reg-username-error' : 'reg-username-hint'"
+      />
+    </app-form-field>
+
+    <app-form-field
+      label="Correo universitario"
+      forId="reg-email"
+      [error]="emailInUse() ? messages.email.inUse : error('email')"
+    >
+      <app-text-input
+        inputId="reg-email"
+        type="email"
+        formControlName="email"
+        icon="menu_book"
+        placeholder="tu.nombre@universidad.edu"
+        autocomplete="email"
+        inputmode="email"
+        [required]="true"
+        [invalid]="emailInUse() || !!error('email')"
+        [describedBy]="emailInUse() || error('email') ? 'reg-email-error' : null"
+      />
+      @if (emailInUse()) {
+        <span fieldErrorAction>
+          <a routerLink="/login" [queryParams]="{ email: form.controls.email.value }" class="link-accent ml-1">Inicia sesión</a>
+        </span>
+      }
+    </app-form-field>
+
+    <app-form-field label="Contraseña" forId="reg-password" [error]="error('password')">
+      <app-text-input
+        inputId="reg-password"
+        type="password"
+        formControlName="password"
+        icon="lock"
+        placeholder="Mínimo 8 caracteres"
+        autocomplete="new-password"
+        [required]="true"
+        [invalid]="!!error('password')"
+        [describedBy]="(error('password') ? 'reg-password-error ' : '') + 'reg-password-rules'"
+      />
+      <app-password-checklist listId="reg-password-rules" [value]="form.controls.password.value" />
+    </app-form-field>
+
+    <app-form-field label="Confirmar contraseña" forId="reg-confirm" [error]="error('confirmPassword')">
+      <app-text-input
+        inputId="reg-confirm"
+        type="password"
+        formControlName="confirmPassword"
+        icon="lock"
+        placeholder="Repite tu contraseña"
+        autocomplete="new-password"
+        [required]="true"
+        [invalid]="!!error('confirmPassword')"
+        [describedBy]="error('confirmPassword') ? 'reg-confirm-error' : null"
+      />
+    </app-form-field>
+
+    <app-avatar-picker
+      formControlName="avatar"
+      legend="Elige tu avatar"
+      groupName="reg-avatar"
+      [options]="avatarOptions"
+      [name]="fullName"
+    />
+
+    <div>
+      <label class="flex items-start gap-2.5 text-[13px] text-muted">
+        <input
+          type="checkbox"
+          formControlName="terms"
+          class="neu-checkbox mt-px"
+          [attr.aria-invalid]="error('terms') ? 'true' : null"
+          [attr.aria-describedby]="error('terms') ? 'reg-terms-error' : null"
+        />
+        <span>
+          Acepto los <a href="#" class="font-semibold text-ink underline">Términos</a> y la
+          <a href="#" class="font-semibold text-ink underline">Política de privacidad</a>.
+        </span>
+      </label>
+      @if (error('terms')) {
+        <p id="reg-terms-error" class="mt-1.5 text-xs font-medium text-danger">{{ error('terms') }}</p>
+      }
+    </div>
+
+    <button type="submit" class="btn-primary w-full" [disabled]="pending() !== null">
+      @if (pending() === 'email') {
+        <app-spinner />
+        <span>Creando tu cuenta…</span>
+      } @else {
+        <span>Crear mi cuenta</span>
+        <app-icon name="arrow_forward" [size]="18" />
+      }
+    </button>
+  </form>
+
+  <p class="mt-6 text-center text-[13px] text-muted">
+    ¿Ya tienes una cuenta?
+    <a routerLink="/login" queryParamsHandling="preserve" class="link-accent">Inicia sesión</a>
+  </p>
+</app-auth-page>

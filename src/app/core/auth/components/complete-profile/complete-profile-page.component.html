@@ -1,0 +1,92 @@
+<app-auth-page
+  eyebrow="Un último paso"
+  heading="Completa tu perfil"
+  subheading="Elige cómo te verán tus compañeros en las salas."
+>
+  <div class="neu-well mb-5 flex items-center gap-3 px-4 py-3">
+    <app-icon name="verified_user" [size]="20" class="text-success" />
+    <p class="min-w-0 text-[13px] text-muted">
+      Sesión iniciada como
+      <span class="block truncate font-semibold text-ink">{{ store.user()?.email }}</span>
+    </p>
+  </div>
+
+  <div aria-live="assertive" aria-atomic="true">
+    @if (formError()) {
+      <div role="alert" class="mb-4 flex items-start gap-2 rounded-xl bg-danger-soft px-3.5 py-3 text-sm text-danger">
+        <app-icon name="error" [size]="18" class="mt-px" />
+        <span>{{ formError() }}</span>
+      </div>
+    }
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate class="space-y-4" aria-label="Completar perfil">
+    <div class="grid gap-4 sm:grid-cols-2">
+      <app-form-field label="Nombres" forId="cp-nombres" [error]="error('nombres')">
+        <app-text-input
+          inputId="cp-nombres"
+          formControlName="nombres"
+          icon="person"
+          autocomplete="given-name"
+          [required]="true"
+          [maxlength]="60"
+          [invalid]="!!error('nombres')"
+          [describedBy]="error('nombres') ? 'cp-nombres-error' : null"
+        />
+      </app-form-field>
+      <app-form-field label="Apellidos" forId="cp-apellidos" [error]="error('apellidos')">
+        <app-text-input
+          inputId="cp-apellidos"
+          formControlName="apellidos"
+          autocomplete="family-name"
+          [required]="true"
+          [maxlength]="60"
+          [invalid]="!!error('apellidos')"
+          [describedBy]="error('apellidos') ? 'cp-apellidos-error' : null"
+        />
+      </app-form-field>
+    </div>
+
+    <app-form-field
+      label="Nombre de usuario"
+      forId="cp-username"
+      [error]="error('username')"
+      [hint]="usernameState() === 'checking' ? 'Comprobando disponibilidad…' : usernameState() === 'available' ? 'Disponible ✓' : 'Obligatorio. Podrás cambiarlo después en tu perfil.'"
+    >
+      <app-text-input
+        inputId="cp-username"
+        formControlName="username"
+        icon="alternate_email"
+        placeholder="marina.lopez"
+        autocomplete="username"
+        [required]="true"
+        [maxlength]="20"
+        [invalid]="!!error('username')"
+        [describedBy]="error('username') ? 'cp-username-error' : 'cp-username-hint'"
+      />
+    </app-form-field>
+
+    <app-avatar-picker
+      formControlName="avatar"
+      legend="Elige tu avatar"
+      groupName="cp-avatar"
+      [options]="avatarOptions"
+      [name]="fullName"
+    />
+
+    <button type="submit" class="btn-primary w-full" [disabled]="pending()">
+      @if (pending()) {
+        <app-spinner />
+        <span>Guardando…</span>
+      } @else {
+        <span>Entrar a StudyRoom</span>
+        <app-icon name="arrow_forward" [size]="18" />
+      }
+    </button>
+  </form>
+
+  <p class="mt-6 text-center text-[13px] text-muted">
+    ¿No eres tú?
+    <button type="button" class="link-accent" (click)="logout()">Cerrar sesión</button>
+  </p>
+</app-auth-page>

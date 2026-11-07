@@ -12,9 +12,44 @@ La arquitectura y las reglas de importación están en [docs/ARCHITECTURE.md](do
 2. Ejecuta `npm start`.
 3. Abre `http://localhost:4200`.
 
-## Backend
+## Estado: Sprint 0 y Sprint 1 (mockup listo para conectar backend)
 
-Apunta `runtimeConfig.apiUrl` en `src/app/core/config/runtime-config.ts` a la URL de la API.
+Rutas implementadas (plan en `docs/guia/`):
+
+| Ruta                | Acceso                         | Historia            |
+| ------------------- | ------------------------------ | ------------------- |
+| `/`                 | Pública                        | Sprint 0 (landing + lectura API → Firestore) |
+| `/registro`         | Solo sin sesión (`guestGuard`) | US-01, US-02        |
+| `/login`            | Solo sin sesión (`guestGuard`) | US-03               |
+| `/completar-perfil` | Identidad sin perfil (`incompleteProfileGuard`) | US-02 |
+| `/dashboard`        | Sesión + perfil (`authGuard`)  | Destino tras login (panel completo en Sprint 2) |
+
+### Modo simulado
+
+Con `runtimeConfig.useMocks = true` la app funciona sin backend: los adaptadores de
+`core/auth/services/mock/` imitan Firebase Auth y `backend-api` y guardan los datos en
+`localStorage` (`frontmeet.mock-db.v1`; bórralo para reiniciar).
+
+- Cuenta de prueba: `marina.lopez@universidad.edu` / `Estudio2026`.
+- "Continuar con Google" simula un primer acceso y lleva a completar perfil.
+- El username `marina.lopez` está ocupado, para probar el conflicto 409.
+
+### Conectar el backend
+
+1. Ajusta `apiUrl` y `realtimeUrl` en `src/app/core/config/runtime-config.ts`.
+2. Instala `firebase`, completa `runtimeConfig.firebase` e implementa
+   `core/auth/services/firebase-identity.provider.ts` (el mapeo está documentado en el archivo).
+3. Pon `useMocks: false`. Componentes, store y guards no cambian.
+
+Contratos esperados de `backend-api` (sobre `ApiResponse<T>`, errores con `code`, `message`,
+`fieldErrors`, `traceId`; token `Authorization: Bearer <ID token de Firebase>`):
+
+| Método | Ruta                                        | Uso                                   |
+| ------ | ------------------------------------------- | ------------------------------------- |
+| GET    | `/api/v1/health`                            | Sprint 0: estado + dato de Firestore  |
+| GET    | `/api/v1/me`                                | Perfil; 404 `profile-not-found` si falta |
+| POST   | `/api/v1/me`                                | Crear perfil; 409 `username-taken`    |
+| GET    | `/api/v1/usernames/{username}/availability` | Disponibilidad orientativa            |
 
 ## Despliegue
 

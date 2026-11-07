@@ -1,25 +1,34 @@
-$color-primary: #6366f1;
-$color-primary-dark: #4f46e5;
-$color-primary-soft: #1b1d3f;
-$color-accent: #818cf8;
-$color-canvas: #06070d;
-$color-surface: #0d0f1a;
-$color-surface-raised: #141726;
-$color-ink: #f4f5f9;
-$color-muted: #8992a9;
-$color-border: #1f2333;
-$color-border-strong: #2a3045;
-$color-skeleton: #1e1e2e;
-$color-danger: #f87171;
-$color-danger-soft: #2a1519;
-$color-success: #34d399;
-$color-success-soft: #0f2a20;
-$color-warning: #fbbf24;
-$color-warning-soft: #2a2110;
+// Tema StudyRoom: claro, cálido y suave (ver docs/guia y el prototipo en PDF).
+$color-primary: #ef6f5e;
+$color-primary-dark: #d9584a;
+$color-primary-soft: #fbe4df;
+$color-accent: #e2604f;
+$color-canvas: #f3efea;
+$color-surface: #f4f0eb;
+$color-surface-raised: #f7f4f0;
+$color-ink: #1f1c1a;
+$color-muted: #847d76;
+$color-border: #e6e0d9;
+$color-border-strong: #d6cec5;
+$color-skeleton: #ece6df;
+$color-danger: #c94b3d;
+$color-danger-soft: #fbe6e2;
+$color-success: #4f8a69;
+$color-success-soft: #dceadf;
+$color-warning: #b7832f;
+$color-warning-soft: #f6ead2;
 $color-danger-warm: #d97762;
 $color-success-muted: #7aa88f;
 $color-warning-warm: #c39a55;
-$color-glow-soft: #8875d8;
+$color-glow-soft: #b9a6d6;
+
+// Tonos pastel de las tarjetas de participantes y paneles decorativos
+$color-tile-peach: #ecd9c6;
+$color-tile-mint: #d6e5da;
+$color-tile-sky: #d6e1ec;
+$color-tile-rose: #f6d4ce;
+$color-lavender: #e2d8e9;
+$color-lavender-soft: #ebe4f0;
 
 :root {
   --color-primary: #{$color-primary};
@@ -44,11 +53,30 @@ $color-glow-soft: #8875d8;
   --color-success-muted: #{$color-success-muted};
   --color-warning-warm: #{$color-warning-warm};
   --color-glow-soft: #{$color-glow-soft};
-  --shadow-glow-soft: 0 0 12px rgb(136 117 216 / 14%);
+  --color-tile-peach: #{$color-tile-peach};
+  --color-tile-mint: #{$color-tile-mint};
+  --color-tile-sky: #{$color-tile-sky};
+  --color-tile-rose: #{$color-tile-rose};
+  --color-lavender: #{$color-lavender};
+  --color-lavender-soft: #{$color-lavender-soft};
 
-  // Tarjeta con resplandor cálido y discreto
-  --color-glow: 251 191 136;
-  --color-surface-warm: #14121a;
+  // Neumorfismo: luz desde arriba a la izquierda (sombra clara) y sombra cálida abajo a la derecha.
+  --neu-light: rgb(255 255 255 / 88%);
+  --neu-dark: rgb(163 141 120 / 26%);
+  --neu-dark-strong: rgb(163 141 120 / 34%);
+  --shadow-soft: -6px -6px 14px var(--neu-light), 7px 7px 16px var(--neu-dark);
+  --shadow-raised: -12px -12px 28px var(--neu-light), 14px 14px 34px var(--neu-dark-strong);
+  --shadow-inset: inset 3px 3px 7px var(--neu-dark), inset -3px -3px 7px var(--neu-light);
+  --shadow-pressed: inset 4px 4px 9px var(--neu-dark-strong), inset -4px -4px 9px var(--neu-light);
+  --shadow-primary: -5px -5px 12px var(--neu-light), 6px 8px 18px rgb(226 96 79 / 34%),
+    inset 1px 1px 1px rgb(255 255 255 / 30%), inset -2px -2px 4px rgb(160 50 35 / 14%);
+  --shadow-primary-pressed: inset 3px 3px 7px rgb(160 50 35 / 30%), inset -2px -2px 5px rgb(255 255 255 / 22%);
+  // Variante sobre el panel lavanda
+  --shadow-lavender: -8px -8px 20px rgb(255 255 255 / 55%), 10px 10px 24px rgb(120 96 140 / 24%);
+  --shadow-glow-soft: 0 0 12px rgb(185 166 214 / 22%);
+
+  --color-glow: 239 111 94;
+  --color-surface-warm: #faf6f2;
 
   // Escala de espaciado (múltiplos de 4 px)
   --space-1: 0.25rem;
@@ -70,7 +98,6 @@ $color-glow-soft: #8875d8;
   // Scrollbar unificado
   --scrollbar-size: 8px;
   --scrollbar-track: transparent;
-  --scrollbar-thumb: #2a3045;
-  --scrollbar-thumb-hover: #3b4360;
+  --scrollbar-thumb: #d6cec5;
+  --scrollbar-thumb-hover: #bfb5aa;
 }
-

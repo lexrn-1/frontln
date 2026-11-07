@@ -1,16 +1,16 @@
 @use '@angular/material' as mat;
 @use './styles/variables';
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Material+Icons&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Material+Icons&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..500,0..1,0&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-$app-primary: mat.define-palette(mat.$indigo-palette, 500);
-$app-accent: mat.define-palette(mat.$indigo-palette, 300);
+$app-primary: mat.define-palette(mat.$deep-orange-palette, 400);
+$app-accent: mat.define-palette(mat.$deep-orange-palette, 300);
 $app-warn: mat.define-palette(mat.$red-palette, 400);
-$app-theme: mat.define-dark-theme(
+$app-theme: mat.define-light-theme(
   (
     color: (
       primary: $app-primary,
@@ -18,7 +18,7 @@ $app-theme: mat.define-dark-theme(
       warn: $app-warn
     ),
     typography: mat.define-typography-config(
-      $font-family: 'Inter, sans-serif'
+      $font-family: '"DM Sans", sans-serif'
     ),
     density: 0
   )
@@ -30,11 +30,17 @@ $app-theme: mat.define-dark-theme(
 @layer base {
   html {
     @apply min-h-full;
-    color-scheme: dark;
+    color-scheme: light;
   }
 
   body {
     @apply min-h-full bg-canvas font-sans text-ink antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-display tracking-tight;
     margin: 0;
   }
 
@@ -51,7 +57,7 @@ $app-theme: mat.define-dark-theme(
   textarea:not(.mat-mdc-input-element):focus-visible,
   select:not(.mat-mdc-select-trigger):focus-visible,
   [tabindex]:focus-visible {
-    @apply outline-none ring-2 ring-accent ring-offset-2 ring-offset-canvas;
+    @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-canvas;
   }
 
   .mat-mdc-input-element:focus-visible,
@@ -64,20 +70,23 @@ $app-theme: mat.define-dark-theme(
 // Primitivas visuales compartidas por las pantallas autenticadas .
 // Sólo componen tokens del tema; las pantallas no repiten estas utilidades a mano.
 @layer components {
+  // Tarjeta elevada neumórfica (misma familia de color que el fondo)
   .surface-card {
-    @apply rounded-2xl border border-border bg-surface;
+    @apply rounded-3xl bg-surface-raised shadow-raised;
   }
 
+  // Campo hundido en la superficie
   .input-control {
-    @apply h-11 w-full rounded-xl border border-border bg-surface-raised px-3.5 text-sm text-ink placeholder:text-muted;
+    @apply h-11 w-full rounded-xl border border-transparent bg-canvas px-3.5 text-sm text-ink shadow-inset placeholder:text-muted;
     transition:
       border-color var(--duration-micro) var(--ease-out),
       box-shadow var(--duration-panel) var(--ease-out);
   }
 
   .input-control:focus {
-    @apply border-accent outline-none;
-    box-shadow: 0 0 0 3px var(--color-primary-soft);
+    @apply outline-none;
+    border-color: var(--color-primary);
+    box-shadow: var(--shadow-inset), 0 0 0 3px var(--color-primary-soft);
   }
 
   .input-control[aria-invalid='true'] {
@@ -85,11 +94,68 @@ $app-theme: mat.define-dark-theme(
   }
 
   .btn-primary {
-    @apply inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-primary px-4 text-sm font-semibold text-white transition hover:bg-primary-dark disabled:opacity-60;
+    @apply inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-primary px-5 text-sm font-semibold text-white shadow-primary transition hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .btn-primary:not(:disabled):active {
+    box-shadow: var(--shadow-primary-pressed);
   }
 
   .btn-ghost {
-    @apply inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-4 text-sm font-semibold text-ink transition hover:bg-surface-raised;
+    @apply inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-surface-raised px-5 text-sm font-semibold text-ink shadow-soft transition disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .btn-ghost:not(:disabled):active {
+    @apply shadow-pressed;
+  }
+
+  // Chip de ícono elevado (logo, funciones, avisos)
+  .neu-chip {
+    @apply grid place-items-center rounded-xl shadow-soft;
+  }
+
+  // Ranura hundida (separadores, contenedores de datos de prueba)
+  .neu-well {
+    @apply rounded-2xl bg-canvas shadow-inset;
+  }
+
+  // Casilla neumórfica hundida con marca coral
+  .neu-checkbox {
+    @apply relative h-[18px] w-[18px] shrink-0 cursor-pointer appearance-none rounded-md border border-border-strong bg-canvas shadow-inset transition;
+  }
+
+  .neu-checkbox:checked {
+    @apply border-primary bg-primary shadow-primary;
+  }
+
+  .neu-checkbox:checked::after {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 2.5px;
+    width: 5px;
+    height: 9px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+
+  .neu-checkbox[aria-invalid='true'] {
+    box-shadow: var(--shadow-inset), 0 0 0 2px var(--color-danger);
+  }
+
+  // Separador tallado
+  .neu-groove {
+    @apply h-[3px] rounded-full;
+    box-shadow: inset 1px 1px 2px var(--neu-dark-strong), inset -1px -1px 2px var(--neu-light);
+  }
+
+  .eyebrow {
+    @apply text-[11px] font-bold uppercase tracking-[0.18em] text-primary;
+  }
+
+  .link-accent {
+    @apply font-semibold text-accent underline-offset-2 hover:underline;
   }
 }
 
@@ -118,7 +184,7 @@ $app-theme: mat.define-dark-theme(
   border: 1px solid var(--color-border);
   border-radius: 0.75rem !important;
   background: var(--color-surface-raised);
-  box-shadow: 0 16px 36px rgb(0 0 0 / 40%);
+  box-shadow: var(--shadow-raised);
 }
 
 .app-select-panel .mat-mdc-option {
@@ -131,7 +197,7 @@ $app-theme: mat.define-dark-theme(
 }
 
 .app-select-panel .mat-mdc-option.mdc-list-item--selected {
-  background: rgb(99 102 241 / 20%);
+  background: var(--color-primary-soft);
 }
 
 // El contenedor de mat-icon es fijo (24x24); lo hacemos seguir el font-size
@@ -263,4 +329,41 @@ a[class*='bg-primary']:active {
   .real {
     animation-duration: 420ms !important;
   }
+}
+
+// --- Íconos Material Symbols (trazo fino, como el prototipo) -----------------
+.icon-symbol {
+  font-family: 'Material Symbols Rounded';
+  font-weight: 300;
+  font-style: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  direction: ltr;
+  flex-shrink: 0;
+  -webkit-font-smoothing: antialiased;
+  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+}
+
+// --- Enlace "saltar al contenido" --------------------------------------------
+.skip-link {
+  position: fixed;
+  left: 1rem;
+  top: -4rem;
+  z-index: 100;
+  border-radius: 0.75rem;
+  background: var(--color-ink);
+  color: var(--color-surface-raised);
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: top var(--duration-micro) var(--ease-out);
+}
+
+.skip-link:focus {
+  top: 1rem;
 }
