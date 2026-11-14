@@ -1,67 +1,51 @@
 # FrontMeet (Frontend)
 
-Aplicación Angular 17 standalone (SPA) construida con Tailwind CSS, Angular Material y SCSS,
-siguiendo `core` / `shared` / `features` / `layouts` y Atomic Design. El flujo es
-página → store reactivo (signals) → servicio HTTP → API REST.
+SPA Angular 17 con Tailwind, Material y SCSS. Mantiene `core` / `shared` / `features`, stores con signals y adaptadores HTTP. Ver [arquitectura](docs/ARCHITECTURE.md) y [conexión pública](docs/INTEGRATION.md).
 
-La arquitectura y las reglas de importación están en [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+## Ejecutar y compilar
 
-## Uso
+```bash
+pnpm install --frozen-lockfile
+pnpm start
+pnpm run build
+```
 
-1. Ejecuta `npm install`.
-2. Ejecuta `npm start`.
-3. Abre `http://localhost:4200`.
+La pantalla local abre en `http://localhost:4200`, pero sus peticiones usan la API HTTPS publicada. La compilación activa tiene Firebase Auth real y mocks de backend deshabilitados.
 
-## Estado: Sprint 0 y Sprint 1 (mockup listo para conectar backend)
+| Uso | Configuración activa |
+|---|---|
+| API REST | https://api.5-253-232-179.sslip.io/api/v1 |
+| Readiness | https://api.5-253-232-179.sslip.io/q/health/ready |
+| Origen realtime | https://api.5-253-232-179.sslip.io |
+| Path Socket.IO | /socket.io/ |
 
-Rutas implementadas (plan en `docs/guia/`):
+La configuración pública vive en `src/app/core/config/runtime-config.ts`. No contiene credenciales administrativas. Una configuración alternativa local debe activarse explícitamente; no se usa localhost como destino predeterminado del backend.
 
-| Ruta                | Acceso                         | Historia            |
-| ------------------- | ------------------------------ | ------------------- |
-| `/`                 | Pública                        | Sprint 0 (landing + lectura API → Firestore) |
-| `/registro`         | Solo sin sesión (`guestGuard`) | US-01, US-02        |
-| `/login`            | Solo sin sesión (`guestGuard`) | US-03               |
-| `/completar-perfil` | Identidad sin perfil (`incompleteProfileGuard`) | US-02 |
-| `/dashboard`        | Sesión + perfil (`authGuard`)  | Destino tras login (panel completo en Sprint 2) |
+## Flujos conectados
 
-### Modo simulado
+- Firebase SDK registra/inicia sesión por correo o Google; Quarkus valida su ID token.
+- `GET /session` determina si corresponde completar perfil o entrar; solo un perfil completo consulta `GET /me`.
+- `POST /me/complete` recibe firstName/lastName/username/avatar. El adaptador conserva nombres españoles y tonos visuales en el formulario y los traduce al contrato wire.
+- El username se confirma al guardar. Un 409 USERNAME_TAKEN conserva formulario/cuenta para reintento; no existe un endpoint previo de disponibilidad.
+- `POST /session/logout` invalida el token actual y luego Firebase signOut limpia la sesión local, también si falla la petición remota.
+- El indicador público lee readiness y el mensaje demo por separado. Un demo ausente no inventa métricas ni convierte readiness UP en caída.
 
-Con `runtimeConfig.useMocks = true` la app funciona sin backend: los adaptadores de
-`core/auth/services/mock/` imitan `backend-api` (y Firebase Auth si `useFirebaseAuth = false`)
-y guardan los datos en `localStorage` (`frontmeet.mock-db.v1`; bórralo para reiniciar).
+Rutas UI: `/`, `/registro`, `/login`, `/completar-perfil`, `/dashboard`. El dashboard completo corresponde a Sprint 2. Un fallo temporal de API durante la restauración permite reintentar desde login; los guards no quedan esperando indefinidamente.
 
-Con identidad simulada (`useFirebaseAuth = false`):
+Los dominios institucionales siguen pendientes: una lista vacía permite cualquier correo válido, igual que backend. Los proveedores y dominios autorizados de Firebase deben estar configurados para la aplicación real.
 
-- Cuenta de prueba: `marina.lopez@universidad.edu` / `Estudio2026`.
-- "Continuar con Google" simula un primer acceso y lleva a completar perfil.
-- El username `marina.lopez` está ocupado, para probar el conflicto 409.
+## Pruebas
 
-### Conectar el backend
+```bash
+pnpm test
+```
 
-1. Ajusta `apiUrl` y `realtimeUrl` en `src/app/core/config/runtime-config.ts`.
-2. Firebase Auth ya está conectado (`useFirebaseAuth: true`, proyecto `appmeet-dev`). En la
-   consola de Firebase deben estar habilitados los proveedores *Correo/contraseña* y *Google*,
-   y el dominio de despliegue debe figurar en *Authentication → Dominios autorizados*.
-3. Pon `useMocks: false` para usar backend-api real. Componentes, store y guards no cambian.
+Se requiere Chrome/Chromium o `CHROME_BIN`. Las pruebas usan Jasmine, Karma y HttpTestingController; no crean usuarios reales. Cubren contratos, mapeo de datos, estados de sesión, guards, errores, token Bearer, logout y health/demo.
 
-Contratos esperados de `backend-api` (sobre `ApiResponse<T>`, errores con `code`, `message`,
-`fieldErrors`, `traceId`; token `Authorization: Bearer <ID token de Firebase>`):
+## Vercel y gateway
 
-| Método | Ruta                                        | Uso                                   |
-| ------ | ------------------------------------------- | ------------------------------------- |
-| GET    | `/api/v1/health`                            | Sprint 0: estado + dato de Firestore  |
-| GET    | `/api/v1/me`                                | Perfil; 404 `profile-not-found` si falta |
-| POST   | `/api/v1/me`                                | Crear perfil; 409 `username-taken`    |
-| GET    | `/api/v1/usernames/{username}/availability` | Disponibilidad orientativa            |
+`vercel.json` mantiene `pnpm run build`, salida `dist/frontmeet/browser` y fallback SPA. Se requiere redeploy para publicar estos cambios; no se ejecutó publicación desde esta entrega. No cambiar las URLs a `/q/health/ready/api/...`: readiness y API de negocio son rutas independientes.
 
-## Despliegue
+En Dokploy debe dirigirse `/socket.io/` a backend-realtime:9092 y el resto a backend-api:8080. La revisión pública inicial devolvió 404 en Socket.IO; el cambio remoto de enrutamiento sigue pendiente. No hay funcionalidad frontend de salas/chat/WebRTC en esta entrega.
 
-- Build de producción: `npm run build` (salida en `dist/frontmeet`).
-- Pensado para desplegar en Vercel (`vercel.json`). Vercel instala con pnpm y
-  `--frozen-lockfile`: al cambiar dependencias sincroniza `pnpm-lock.yaml` y `package-lock.json`.
-  Mantén `.npmrc` (`node-linker=hoisted`) para Angular Material.
-
-## Pruebas unitarias
-
-Ejecuta `npm test` para correr los archivos `*.spec.ts` con Jasmine y Karma en
-ChromeHeadless. Se necesita Chrome o Chromium instalado (o define `CHROME_BIN`).
+Los adaptadores mock se conservan solo para activación explícita con `useMocks: true` (e identidad simulada con `useFirebaseAuth: false`). No están activos en la configuración publicada por el build actual.

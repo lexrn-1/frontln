@@ -18,7 +18,7 @@ Contiene servicios, guards, interceptors y stores que son fundamentales para el 
 core/
 ├── auth/          # Autenticación (ver abajo)
 ├── config/        # runtime-config.ts: URL de la API y valores por defecto
-├── http/          # Contratos HTTP comunes (ApiResponse<T>, errores)
+├── http/          # Contratos HTTP directos y errores normalizados
 ├── interceptors/  # Interceptors transversales (p. ej. manejo de errores HTTP)
 ├── layout/        # Shell de las pantallas autenticadas y servicios de navegación
 └── utils/         # Utilidades de infraestructura (fechas, etc.)
@@ -33,7 +33,7 @@ y cuenta. Se organiza en las siguientes capas:
 core/auth/
 ├── models/        # Modelos de sesión, usuario y contratos HTTP
 ├── components/    # Login/registro y cuenta, con sus plantillas
-├── services/      # AuthService: peticiones HTTP a /api/auth
+├── services/      # AuthService: peticiones HTTP a /api/v1/session y /api/v1/me
 ├── store/         # AuthStore: sesión, token, usuario, roles, persistencia y expiración
 ├── guards/        # Protección de rutas según sesión y permisos
 └── interceptors/  # Envío del token Bearer
@@ -151,3 +151,11 @@ Las respuestas de la API siguen el sobre `ApiResponse<T>` de `core/http/api-resp
 ## Reactive Forms
 
 Todos los formularios usan Reactive Forms (`FormGroup`, `FormControl`) con validación programática. No se usan Template-driven Forms.
+
+## Adaptación al backend publicado
+
+Los DTO wire describen las respuestas directas de Quarkus y permanecen separados del modelo visual español. `profile.mapper.ts` traduce datos de formulario y avatares. AuthStore usa /session como autoridad para perfil pendiente/completo, y los guards ofrecen reintento si la API no está disponible.
+
+El interceptor usa origen y prefijo REST exactos para Bearer. El contexto de logout desactiva recuperación de 401; la limpieza local no depende del éxito de la invalidación remota. La landing consulta readiness y demo como capacidades independientes, sin cifras simuladas en el modo real.
+
+La configuración pública activa se documenta en [INTEGRATION.md](INTEGRATION.md).

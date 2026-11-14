@@ -1,50 +1,37 @@
-import { HttpErrorResponse, HttpInterceptorFn, HttpRequest } from '@angular/common/http';
+import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, switchMap, throwError } from 'rxjs';
-
 import { runtimeConfig } from '../../config/runtime-config';
 import { AuthStore } from '../store/auth.store';
+import { IdentityProvider } from '../services/identity-provider';
+import { SKIP_AUTH_RECOVERY } from './auth-context';
 
-/** Solo se envía el token a dominios propios (backend-api y backend-realtime). */
-const OWN_ORIGINS = [runtimeConfig.apiUrl, runtimeConfig.realtimeUrl].map((url) => new URL(url).origin);
-
-function isOwnApi(req: HttpRequest<unknown>): boolean {
+/** Exact origin and REST path boundary; health, demo and third parties never receive tokens. */
+export function isPrivateApi(url: string): boolean {
   try {
-    return OWN_ORIGINS.includes(new URL(req.url, window.location.origin).origin);
-  } catch {
-    return false;
-  }
+    const target = new URL(url, window.location.origin);
+    const base = new URL(runtimeConfig.apiUrl);
+    return target.origin === base.origin && target.pathname.startsWith(`${base.pathname}/`)
+      && target.pathname !== `${base.pathname}/demo`;
+  } catch { return false; }
 }
-
-function withToken(req: HttpRequest<unknown>, token: string | null): HttpRequest<unknown> {
-  return token ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } }) : req;
-}
-
-/**
- * Añade `Authorization: Bearer <ID token>`. Ante 401 renueva el token una vez y reintenta;
- * si vuelve a fallar, cierra la sesión conservando la URL actual. 403 y 409 se propagan
- * para que la pantalla los muestre (`AppError.from`). El token nunca va en URL ni en logs.
- */
 export const authTokenInterceptor: HttpInterceptorFn = (req, next) => {
-  if (!isOwnApi(req)) {
-    return next(req);
-  }
+  if (!isPrivateApi(req.url)) return next(req);
+  const identity = inject(IdentityProvider);
   const store = inject(AuthStore);
   const router = inject(Router);
-
-  return store.getIdToken().pipe(
-    switchMap((token) => next(withToken(req, token))),
+  const send = (token: string | null) => next(token ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } }) : req);
+  return identity.getIdToken().pipe(
+    switchMap(send),
     catchError((error: unknown) => {
-      if (!(error instanceof HttpErrorResponse) || error.status !== 401) {
+      if (req.context.get(SKIP_AUTH_RECOVERY) || !(error instanceof HttpErrorResponse) || error.status !== 401)
         return throwError(() => error);
-      }
-      return store.getIdToken(true).pipe(
-        switchMap((fresh) => next(withToken(req, fresh))),
+      return identity.getIdToken(true).pipe(
+        switchMap(send),
         catchError((retryError: unknown) => {
-          if (retryError instanceof HttpErrorResponse && retryError.status === 401) {
-            void store.logout({ reason: 'expired', returnUrl: router.url });
-          }
+          if (retryError instanceof HttpErrorResponse && retryError.status === 401)
+            void store.logout({ reason: 'expired', returnUrl: router.url, revokeRemote: false });
           return throwError(() => retryError);
         })
       );

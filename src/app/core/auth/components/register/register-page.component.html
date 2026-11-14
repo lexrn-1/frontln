@@ -38,7 +38,7 @@
           placeholder="Ej. Marina"
           autocomplete="given-name"
           [required]="true"
-          [maxlength]="60"
+          [maxlength]="80"
           [invalid]="!!error('nombres')"
           [describedBy]="error('nombres') ? 'reg-nombres-error' : null"
         />
@@ -50,7 +50,7 @@
           placeholder="Ej. López"
           autocomplete="family-name"
           [required]="true"
-          [maxlength]="60"
+          [maxlength]="80"
           [invalid]="!!error('apellidos')"
           [describedBy]="error('apellidos') ? 'reg-apellidos-error' : null"
         />
@@ -61,13 +61,13 @@
       label="Nombre de usuario"
       forId="reg-username"
       [error]="error('username')"
-      [hint]="usernameState() === 'checking' ? 'Comprobando disponibilidad…' : usernameState() === 'available' ? 'Disponible ✓' : 'Así te verán en las salas.'"
+      hint="La disponibilidad se confirma al guardar el perfil."
     >
       <app-text-input
         inputId="reg-username"
         formControlName="username"
         icon="alternate_email"
-        placeholder="marina.lopez"
+        placeholder="marina_lopez"
         autocomplete="username"
         [required]="true"
         [maxlength]="20"
@@ -77,7 +77,7 @@
     </app-form-field>
 
     <app-form-field
-      label="Correo universitario"
+      label="Correo electrónico"
       forId="reg-email"
       [error]="emailInUse() ? messages.email.inUse : error('email')"
     >

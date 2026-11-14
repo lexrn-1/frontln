@@ -9,12 +9,11 @@ import { AvatarPickerComponent } from '../../../../shared/ui/molecules/avatar-pi
 import { FormFieldComponent } from '../../../../shared/ui/molecules/form-field/form-field.component';
 import { AuthPageComponent } from '../../../../shared/ui/templates/auth-page/auth-page.component';
 import { controlError, focusFirstInvalid } from '../../../../shared/utils/form-errors';
-import { USERNAME_PATTERN, notBlankValidator } from '../../../../shared/validators/auth.validators';
+import { usernameValidator, notBlankValidator } from '../../../../shared/validators/auth.validators';
 import { AppError } from '../../../http/app-error';
 import { safeReturnUrl } from '../../../utils/safe-return-url';
 import { AVATAR_OPTIONS } from '../../models/auth.models';
 import { AuthStore } from '../../store/auth.store';
-import { trackUsernameAvailability } from '../username-availability';
 
 /**
  * US-02: primer acceso (Google o registro interrumpido). Obliga a elegir username.
@@ -49,27 +48,26 @@ export class CompleteProfilePageComponent {
   private readonly draft = this.store.draft();
 
   protected readonly form = this.fb.group({
-    nombres: [this.draft?.nombres ?? '', [Validators.required, notBlankValidator(), Validators.maxLength(60)]],
-    apellidos: [this.draft?.apellidos ?? '', [Validators.required, notBlankValidator(), Validators.maxLength(60)]],
-    username: [this.draft?.username ?? '', [Validators.required, Validators.pattern(USERNAME_PATTERN)]],
+    nombres: [this.draft?.nombres ?? '', [Validators.required, notBlankValidator(), Validators.maxLength(80)]],
+    apellidos: [this.draft?.apellidos ?? '', [Validators.required, notBlankValidator(), Validators.maxLength(80)]],
+    username: [this.draft?.username ?? '', [Validators.required, usernameValidator()]],
     avatar: [this.draft?.avatar ?? 'peach', [Validators.required]]
   });
 
-  protected readonly usernameState = trackUsernameAvailability(this.form.controls.username);
 
   protected readonly messages = {
-    nombres: { required: 'Escribe tus nombres.', maxlength: 'Máximo 60 caracteres.' },
-    apellidos: { required: 'Escribe tus apellidos.', maxlength: 'Máximo 60 caracteres.' },
+    nombres: { required: 'Escribe tus nombres.', maxlength: 'Máximo 80 caracteres.' },
+    apellidos: { required: 'Escribe tus apellidos.', maxlength: 'Máximo 80 caracteres.' },
     username: {
       required: 'Elige un nombre de usuario para continuar.',
-      pattern: 'De 3 a 20 caracteres: minúsculas, números, punto o guion bajo. Empieza por una letra.',
+      pattern: 'De 3 a 20 letras, números o guion bajo. Sin puntos.',
       taken: 'Este nombre de usuario ya está en uso. Prueba con otro.'
     }
   };
 
   constructor() {
     // Si venimos de un registro con username ocupado, se señala el campo desde el inicio.
-    if (this.draft?.username) {
+    if (this.draft?.username && this.store.usernameConflict() === this.draft.username) {
       this.form.controls.username.setErrors({ taken: true });
       this.form.controls.username.markAsTouched();
     }
@@ -95,13 +93,13 @@ export class CompleteProfilePageComponent {
     this.pending.set(true);
     try {
       const value = this.form.getRawValue();
-      await this.store.completeProfile({ ...value, username: value.username.trim().toLowerCase() });
+      await this.store.completeProfile({ ...value, username: value.username.normalize('NFKC').trim() });
       await this.router.navigateByUrl(safeReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl')), {
         replaceUrl: true
       });
     } catch (error) {
       const appError = AppError.from(error);
-      if (appError.code === 'username-taken' || appError.status === 409) {
+      if (appError.code === 'username-taken') {
         this.form.controls.username.setErrors({ taken: true });
         focusFirstInvalid(this.host.nativeElement);
       } else {

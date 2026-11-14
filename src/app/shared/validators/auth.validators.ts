@@ -31,23 +31,22 @@ export function matchFieldsValidator(key: string, confirmKey: string): Validator
   };
 }
 
-/**
- * Correo institucional: si `domains` está vacío, se acepta cualquier dominio que contenga `.edu`.
- */
+/** Empty policy accepts any valid email; configured domains require exact matching. */
 export function institutionalEmailValidator(domains: readonly string[]): ValidatorFn {
   return (control: AbstractControl): ValidationErrors | null => {
     const value = ((control.value as string | null) ?? '').trim().toLowerCase();
-    if (!value || !value.includes('@')) return null;
+    if (!value || !value.includes('@') || !domains.length) return null;
     const domain = value.split('@')[1] ?? '';
-    const ok = domains.length
-      ? domains.some((d) => domain === d || domain.endsWith(`.${d}`))
-      : /(^|\.)edu(\.[a-z]{2,})?$/.test(domain) || domain.includes('.edu.');
-    return ok ? null : { institutional: true };
+    return domains.some((d) => domain === d.trim().toLowerCase()) ? null : { institutional: true };
   };
 }
-
-/** Username: 3–20 caracteres en minúscula, números, punto o guion bajo; empieza por letra. */
-export const USERNAME_PATTERN = /^[a-z][a-z0-9._]{2,19}$/;
+export const USERNAME_PATTERN = /^[A-Za-z0-9_]{3,20}$/;
+export function usernameValidator(): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null => {
+    const value = String(control.value ?? '').normalize('NFKC').trim();
+    return !value || USERNAME_PATTERN.test(value) ? null : { pattern: true };
+  };
+}
 
 /** Texto con al menos un carácter no blanco. */
 export function notBlankValidator(): ValidatorFn {

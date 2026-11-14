@@ -3,8 +3,8 @@ import { Observable } from 'rxjs';
 import { IdentityUser } from '../models/auth.models';
 
 /**
- * Puerto de identidad. La implementación real envolverá el SDK web de Firebase Auth
- * (correo/contraseña y Google); hoy se usa `MockIdentityProvider`.
+ * Puerto de identidad. FirebaseIdentityProvider envuelve el SDK web de Firebase Auth
+ * (correo/contraseña y Google). El mock solo se usa al activarlo explícitamente.
  *
  * Errores: se lanzan como `AppError` con los códigos
  * `email-already-in-use`, `invalid-credential`, `popup-closed`, `google-failed`, `network`.

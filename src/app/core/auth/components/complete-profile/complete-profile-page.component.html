@@ -29,7 +29,7 @@
           icon="person"
           autocomplete="given-name"
           [required]="true"
-          [maxlength]="60"
+          [maxlength]="80"
           [invalid]="!!error('nombres')"
           [describedBy]="error('nombres') ? 'cp-nombres-error' : null"
         />
@@ -40,7 +40,7 @@
           formControlName="apellidos"
           autocomplete="family-name"
           [required]="true"
-          [maxlength]="60"
+          [maxlength]="80"
           [invalid]="!!error('apellidos')"
           [describedBy]="error('apellidos') ? 'cp-apellidos-error' : null"
         />
@@ -51,13 +51,13 @@
       label="Nombre de usuario"
       forId="cp-username"
       [error]="error('username')"
-      [hint]="usernameState() === 'checking' ? 'Comprobando disponibilidad…' : usernameState() === 'available' ? 'Disponible ✓' : 'Obligatorio. Podrás cambiarlo después en tu perfil.'"
+      hint="La disponibilidad se confirma al guardar el perfil."
     >
       <app-text-input
         inputId="cp-username"
         formControlName="username"
         icon="alternate_email"
-        placeholder="marina.lopez"
+        placeholder="marina_lopez"
         autocomplete="username"
         [required]="true"
         [maxlength]="20"

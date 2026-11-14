@@ -1,44 +1,35 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, map } from 'rxjs';
-
+import { Observable, catchError, map, of, switchMap, timeout } from 'rxjs';
 import { runtimeConfig } from '../../../core/config/runtime-config';
-import { ApiResponse } from '../../../core/http/api-response.model';
 import { mockOk } from '../../../core/http/mock-latency';
-import { SystemStatus } from '../models/system-status.model';
+import { ReadinessResponse, SystemStatus } from '../models/system-status.model';
 
-/** Estado del backend. Sin estado propio: lo guarda `SystemStatusStore`. */
-export abstract class SystemStatusService {
-  abstract getStatus(): Observable<SystemStatus>;
-}
-
+export abstract class SystemStatusService { abstract getStatus(): Observable<SystemStatus>; }
 @Injectable()
 export class HttpSystemStatusService extends SystemStatusService {
   private readonly http = inject(HttpClient);
-
   getStatus(): Observable<SystemStatus> {
-    return this.http
-      .get<ApiResponse<SystemStatus>>(`${runtimeConfig.apiUrl}/v1/health`)
-      .pipe(map((r) => r.data));
+    return this.http.get<ReadinessResponse>(runtimeConfig.healthUrl).pipe(timeout(15000), switchMap((ready) => {
+      const status = {
+        api: ready.status, firestore: ready.checks.find((c) => c.name === 'firestore')?.status ?? 'DOWN',
+        checkedAt: new Date().toISOString()
+      };
+      return this.http.get<{message:string}>(`${runtimeConfig.apiUrl}/demo`).pipe(
+        timeout(15000),
+        map((demo): SystemStatus => ({...status,sampleMessage:demo.message,demoState:'available'})),
+        catchError((error: unknown) => of<SystemStatus>({...status,sampleMessage:null,
+          demoState:error instanceof HttpErrorResponse && error.status === 404 ? 'missing':'unavailable'}))
+      );
+    }));
   }
 }
-
 @Injectable()
 export class MockSystemStatusService extends SystemStatusService {
   getStatus(): Observable<SystemStatus> {
-    return mockOk({
-      api: 'UP',
-      firestore: 'UP',
-      sample: { label: 'salas de estudio activas', value: 128 },
-      version: '0.1.0-mock',
-      checkedAt: new Date().toISOString()
-    });
+    return mockOk({api:'UP',firestore:'UP',sampleMessage:'Mensaje de demostración simulado',demoState:'available',checkedAt:new Date().toISOString()});
   }
 }
-
 export function provideSystemStatus() {
-  return {
-    provide: SystemStatusService,
-    useClass: runtimeConfig.useMocks ? MockSystemStatusService : HttpSystemStatusService
-  };
+  return {provide:SystemStatusService,useClass:runtimeConfig.useMocks ? MockSystemStatusService : HttpSystemStatusService};
 }

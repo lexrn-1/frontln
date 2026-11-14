@@ -7,7 +7,7 @@ import {
   CreateProfileRequest,
   IdentityUser,
   UserProfile,
-  UsernameAvailability
+  SessionResponse
 } from '../../models/auth.models';
 import { AuthService } from '../auth.service';
 import { IdentityProvider } from '../identity-provider';
@@ -58,18 +58,15 @@ export class MockAuthService extends AuthService {
     });
   }
 
-  checkUsername(username: string): Observable<UsernameAvailability> {
-    return this.identity.user$.pipe(
-      take(1),
-      switchMap((user) => {
-        const normalized = username.trim().toLowerCase();
-        const taken = mockDb
-          .read()
-          .profiles.some((p) => p.username === normalized && p.uid !== user?.uid);
-        return mockOk({ username: normalized, available: !taken });
-      })
-    );
+  getSession(): Observable<SessionResponse> {
+    return this.withSession((user) => {
+      const complete = mockDb.read().profiles.some((p) => p.uid === user.uid);
+      return mockOk({uid: user.uid,email:user.email,displayName:user.displayName,photoUrl:user.photoUrl,
+        provider:user.provider === 'google' ? 'google.com' : 'password',status:complete?'COMPLETE':'PENDING',
+        profileComplete:complete,nextAction:complete?'ENTER':'COMPLETE_PROFILE'});
+    });
   }
+  logout(): Observable<void> { return mockOk(undefined); }
 
   private withSession<T>(fn: (user: IdentityUser) => Observable<T>): Observable<T> {
     return this.identity.user$.pipe(

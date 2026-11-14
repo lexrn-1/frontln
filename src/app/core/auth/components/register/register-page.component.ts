@@ -12,7 +12,7 @@ import { PasswordChecklistComponent } from '../../../../shared/ui/molecules/pass
 import { AuthPageComponent } from '../../../../shared/ui/templates/auth-page/auth-page.component';
 import { controlError, focusFirstInvalid } from '../../../../shared/utils/form-errors';
 import {
-  USERNAME_PATTERN,
+  usernameValidator,
   institutionalEmailValidator,
   matchFieldsValidator,
   notBlankValidator,
@@ -23,7 +23,6 @@ import { AppError } from '../../../http/app-error';
 import { safeReturnUrl } from '../../../utils/safe-return-url';
 import { AVATAR_OPTIONS } from '../../models/auth.models';
 import { AuthStore } from '../../store/auth.store';
-import { trackUsernameAvailability } from '../username-availability';
 
 /** US-01 (registro con correo) y entrada a US-02 (Google). Ruta `/registro`. */
 @Component({
@@ -58,9 +57,9 @@ export class RegisterPageComponent {
 
   protected readonly form = this.fb.group(
     {
-      nombres: ['', [Validators.required, notBlankValidator(), Validators.maxLength(60)]],
-      apellidos: ['', [Validators.required, notBlankValidator(), Validators.maxLength(60)]],
-      username: ['', [Validators.required, Validators.pattern(USERNAME_PATTERN)]],
+      nombres: ['', [Validators.required, notBlankValidator(), Validators.maxLength(80)]],
+      apellidos: ['', [Validators.required, notBlankValidator(), Validators.maxLength(80)]],
+      username: ['', [Validators.required, usernameValidator()]],
       email: [
         '',
         [Validators.required, Validators.email, institutionalEmailValidator(runtimeConfig.institutionalDomains)]
@@ -73,14 +72,13 @@ export class RegisterPageComponent {
     { validators: matchFieldsValidator('password', 'confirmPassword') }
   );
 
-  protected readonly usernameState = trackUsernameAvailability(this.form.controls.username);
 
   protected readonly messages = {
-    nombres: { required: 'Escribe tus nombres.', maxlength: 'Máximo 60 caracteres.' },
-    apellidos: { required: 'Escribe tus apellidos.', maxlength: 'Máximo 60 caracteres.' },
+    nombres: { required: 'Escribe tus nombres.', maxlength: 'Máximo 80 caracteres.' },
+    apellidos: { required: 'Escribe tus apellidos.', maxlength: 'Máximo 80 caracteres.' },
     username: {
       required: 'Elige un nombre de usuario.',
-      pattern: 'De 3 a 20 caracteres: minúsculas, números, punto o guion bajo. Empieza por una letra.',
+      pattern: 'De 3 a 20 letras, números o guion bajo. Sin puntos.',
       taken: 'Este nombre de usuario ya está en uso.'
     },
     email: {
@@ -110,7 +108,7 @@ export class RegisterPageComponent {
   protected async submit(): Promise<void> {
     this.submitted.set(true);
     this.formError.set(null);
-    if (this.form.invalid || this.usernameState() === 'taken') {
+    if (this.form.invalid) {
       this.form.markAllAsTouched();
       focusFirstInvalid(this.host.nativeElement);
       return;
@@ -119,7 +117,7 @@ export class RegisterPageComponent {
     const { confirmPassword: _c, terms: _t, ...data } = this.form.getRawValue();
     this.pending.set('email');
     try {
-      await this.store.register({ ...data, email: data.email.trim(), username: data.username.trim().toLowerCase() });
+      await this.store.register({ ...data, email: data.email.trim(), username: data.username.normalize('NFKC').trim() });
       await this.router.navigateByUrl(safeReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl')), {
         replaceUrl: true
       });
@@ -157,7 +155,7 @@ export class RegisterPageComponent {
       focusFirstInvalid(this.host.nativeElement);
       return;
     }
-    if (error.code === 'username-taken' || error.status === 409) {
+    if (error.code === 'username-taken') {
       if (this.store.status() === 'incomplete') {
         // La cuenta se creó pero el perfil no: se continúa en completar perfil con los datos conservados.
         void this.router.navigate(['/completar-perfil'], { replaceUrl: true });

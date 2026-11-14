@@ -32,13 +32,17 @@
   </div>
 
   <div aria-live="assertive" aria-atomic="true">
-    @if (formError()) {
+    @if (formError() || sessionError()) {
       <div role="alert" class="mb-4 flex items-start gap-2 rounded-xl bg-danger-soft px-3.5 py-3 text-sm text-danger">
         <app-icon name="error" [size]="18" class="mt-px" />
-        <span>{{ formError() }}</span>
+        <span>{{ formError() || sessionError() }}</span>
       </div>
     }
   </div>
+
+  @if (sessionUnavailable()) {
+    <button type="button" class="btn-ghost mb-4 w-full" [disabled]="pending() !== null" (click)="retrySession()">Reintentar conexión</button>
+  }
 
   <form [formGroup]="form" (ngSubmit)="submit()" novalidate class="space-y-4" aria-label="Formulario de inicio de sesión">
     <app-form-field label="Correo" forId="login-email" [error]="error('email')">

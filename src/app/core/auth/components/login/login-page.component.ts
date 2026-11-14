@@ -43,6 +43,8 @@ export class LoginPageComponent {
   protected readonly submitted = signal(false);
   protected readonly pending = signal<'email' | 'google' | null>(null);
   protected readonly formError = signal<string | null>(null);
+  protected readonly sessionError = this.store.sessionError;
+  protected readonly sessionUnavailable = () => this.store.status() === 'unavailable';
   protected readonly expired = this.route.snapshot.queryParamMap.get('motivo') === 'expired';
   protected readonly returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
 
@@ -98,6 +100,13 @@ export class LoginPageComponent {
     } finally {
       this.pending.set(null);
     }
+  }
+
+  protected async retrySession(): Promise<void> {
+    this.pending.set('email'); this.formError.set(null);
+    try { await this.redirect(await this.store.retrySession()); }
+    catch (error) { this.formError.set(AppError.from(error).message); }
+    finally { this.pending.set(null); }
   }
 
   private redirect(status: SessionStatus): Promise<boolean> {

@@ -2,7 +2,7 @@ export interface ApiResponse<T> {
   success: boolean;
   message: string;
   data: T;
-  timestamp: string;
+  timestamp?: string;
 }
 
 export interface ApiFieldError {
@@ -15,10 +15,11 @@ export interface ApiFieldError {
  * `code`, `message`, `fieldErrors` y `traceId`.
  */
 export interface ApiErrorPayload {
-  success: false;
+  success?: false;
   code: string;
   message: string;
+  fields?: ApiFieldError[];
   fieldErrors?: ApiFieldError[];
   traceId?: string;
-  timestamp: string;
+  timestamp?: string;
 }

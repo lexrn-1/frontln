@@ -1,27 +1,27 @@
 /**
  * Configuración pública por entorno (sin credenciales administrativas).
  *
- * Identidad y backend se conmutan por separado, para poder usar Firebase Auth real
- * mientras backend-api (Quarkus) aún no existe:
+ * Identidad y API se configuran por separado. El valor publicado usa ambas reales:
  * - `useFirebaseAuth`: `true` usa Firebase Auth; `false` simula la identidad.
  * - `useMocks`: `true` simula backend-api (`/api/v1/...`); `false` llama a `apiUrl`.
  * Componentes y stores no cambian en ninguna combinación.
  */
 export const runtimeConfig = {
-  /** URL base de backend-api (REST). */
-  apiUrl: 'http://localhost:8080/api',
-  /** URL de backend-realtime (Socket.IO por WSS). Se usa desde el Sprint 2. */
-  realtimeUrl: 'http://localhost:8081',
+  /** URL REST completa: los servicios añaden únicamente la ruta del recurso. */
+  apiUrl: 'https://api.5-253-232-179.sslip.io/api/v1',
+  /** Origen público compartido; el gateway dirige /socket.io/ a realtime. */
+  realtimeUrl: 'https://api.5-253-232-179.sslip.io',
+  healthUrl: 'https://api.5-253-232-179.sslip.io/q/health/ready',
+  socketPath: '/socket.io/',
   /** Usa adaptadores simulados de backend-api en lugar de HTTP. */
-  useMocks: true,
+  useMocks: false,
   /** Usa Firebase Auth real en lugar de la identidad simulada. */
   useFirebaseAuth: true,
   /** Latencia simulada de los mocks, para ver estados de carga. */
   mockLatencyMs: 650,
   /**
    * Dominios de correo institucional aceptados. Pendiente de confirmar con el equipo
-   * (plan de trabajo, "Riesgos y decisiones de arranque"). Vacío = cualquier dominio
-   * que contenga `.edu`.
+   * (plan de trabajo, "Riesgos y decisiones de arranque"). Vacío = cualquier correo válido; coincide con la política del backend.
    */
   institutionalDomains: [] as string[],
   /**

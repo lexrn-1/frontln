@@ -27,7 +27,7 @@ export const guestGuard: CanActivateFn = async () => {
   const router = inject(Router);
   const status = await store.whenReady().then(() => store.status());
 
-  if (status === 'anonymous') return true;
+  if (status === 'anonymous' || status === 'unavailable') return true;
   return router.createUrlTree([status === 'incomplete' ? '/completar-perfil' : '/dashboard']);
 };
 

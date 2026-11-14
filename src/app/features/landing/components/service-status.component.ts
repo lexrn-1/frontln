@@ -21,8 +21,14 @@ import { SystemStatusStore } from '../store/system-status.store';
         @case ('success') {
           <span class="h-2 w-2 rounded-full bg-success" aria-hidden="true"></span>
           <span>
-            Servicio en línea · <strong class="font-semibold text-ink">{{ store.status()?.sample?.value }}</strong>
-            {{ store.status()?.sample?.label }}
+            Servicio en línea
+            @if (store.status()?.sampleMessage) {
+              · {{ store.status()?.sampleMessage }}
+            } @else if (store.status()?.demoState === 'missing') {
+              · Dato de demostración pendiente
+            } @else {
+              · No pudimos cargar el dato de demostración
+            }
             @if (useMocks) {
               <span class="ml-1 rounded-md bg-warning-soft px-1.5 py-0.5 font-medium text-warning">datos simulados</span>
             }

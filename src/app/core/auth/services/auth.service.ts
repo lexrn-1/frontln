@@ -1,42 +1,33 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, map } from 'rxjs';
-
+import { Observable, map, timeout } from 'rxjs';
 import { runtimeConfig } from '../../config/runtime-config';
-import { ApiResponse } from '../../http/api-response.model';
-import { CreateProfileRequest, UserProfile, UsernameAvailability } from '../models/auth.models';
+import { CreateProfileRequest, SessionResponse, UserProfile, ProfileResponse } from '../models/auth.models';
+import { SKIP_AUTH_RECOVERY } from '../interceptors/auth-context';
+import { fromProfileResponse, toProfileRequest } from './profile.mapper';
 
-/**
- * Peticiones a backend-api relacionadas con la cuenta. Sin estado: el estado vive en `AuthStore`.
- * El token Bearer lo añade `authTokenInterceptor`.
- */
 export abstract class AuthService {
-  /** `GET /api/v1/me` → perfil, o error 404 (`profile-not-found`) si aún no existe. */
+  abstract getSession(): Observable<SessionResponse>;
   abstract getMe(): Observable<UserProfile>;
-  /** `POST /api/v1/me` → crea el perfil. 409 `username-taken` si el username ya existe. */
   abstract createProfile(body: CreateProfileRequest): Observable<UserProfile>;
-  /** `GET /api/v1/usernames/{username}/availability` (orientativo: el servidor decide al crear). */
-  abstract checkUsername(username: string): Observable<UsernameAvailability>;
+  abstract logout(): Observable<void>;
 }
-
 @Injectable()
 export class HttpAuthService extends AuthService {
   private readonly http = inject(HttpClient);
-  private readonly base = `${runtimeConfig.apiUrl}/v1`;
-
+  private readonly base = runtimeConfig.apiUrl;
+  getSession(): Observable<SessionResponse> {
+    return this.http.get<SessionResponse>(`${this.base}/session`).pipe(timeout(15000));
+  }
   getMe(): Observable<UserProfile> {
-    return this.http.get<ApiResponse<UserProfile>>(`${this.base}/me`).pipe(map((r) => r.data));
+    return this.http.get<ProfileResponse>(`${this.base}/me`).pipe(timeout(15000), map(fromProfileResponse));
   }
-
   createProfile(body: CreateProfileRequest): Observable<UserProfile> {
-    return this.http.post<ApiResponse<UserProfile>>(`${this.base}/me`, body).pipe(map((r) => r.data));
+    return this.http.post<ProfileResponse>(`${this.base}/me/complete`, toProfileRequest(body)).pipe(timeout(15000), map(fromProfileResponse));
   }
-
-  checkUsername(username: string): Observable<UsernameAvailability> {
-    return this.http
-      .get<ApiResponse<UsernameAvailability>>(
-        `${this.base}/usernames/${encodeURIComponent(username)}/availability`
-      )
-      .pipe(map((r) => r.data));
+  logout(): Observable<void> {
+    return this.http.post<void>(`${this.base}/session/logout`, null, {
+      context: new HttpContext().set(SKIP_AUTH_RECOVERY, true)
+    }).pipe(timeout(15000));
   }
 }

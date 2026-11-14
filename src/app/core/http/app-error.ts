@@ -1,4 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
+import { TimeoutError } from 'rxjs';
 
 import { ApiErrorPayload, ApiFieldError } from './api-response.model';
 
@@ -19,13 +20,17 @@ export class AppError extends Error {
     if (error instanceof AppError) {
       return error;
     }
+    if (error instanceof TimeoutError) return new AppError('network', 'El servidor tardó demasiado en responder. Inténtalo de nuevo.', 0);
     if (error instanceof HttpErrorResponse) {
       const payload = error.error as Partial<ApiErrorPayload> | null;
       return new AppError(
-        payload?.code ?? defaultCode(error.status),
+        payload?.code ? payload.code.toLowerCase().replace(/_/g, '-') : defaultCode(error.status),
         payload?.message ?? defaultMessage(error.status),
         error.status,
-        payload?.fieldErrors ?? [],
+        (payload?.fields ?? payload?.fieldErrors ?? []).map((item) => ({
+          field: ({firstName: 'nombres', lastName: 'apellidos'} as Record<string, string>)[item.field.split('.').pop() ?? ''] ?? item.field.split('.').pop() ?? item.field,
+          message: item.message
+        })),
         payload?.traceId
       );
     }
