@@ -7,6 +7,7 @@ module.exports = {
       colors: {
         primary: 'var(--color-primary)',
         'primary-dark': 'var(--color-primary-dark)',
+        'primary-ink': 'var(--color-primary-ink)',
         'primary-soft': 'var(--color-primary-soft)',
         accent: 'var(--color-accent)',
         canvas: 'var(--color-canvas)',

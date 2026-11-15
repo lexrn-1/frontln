@@ -1,0 +1,114 @@
+<div class="mx-auto max-w-3xl space-y-5">
+  @if (store.isDemo) {
+    <p class="rounded-xl bg-warning-soft px-4 py-2 text-xs font-medium text-warning" role="note">
+      Perfil de demostración: los cambios solo duran mientras no recargues la página.
+    </p>
+  }
+
+  @if (store.user.profile(); as profile) {
+    <!-- Cabecera del perfil -->
+    <section class="flex flex-col gap-5 rounded-[28px] bg-gradient-to-r from-primary-soft via-surface-raised to-lavender-soft p-6 shadow-raised sm:flex-row sm:items-center sm:p-7" aria-label="Resumen del perfil">
+      <div class="relative shrink-0 self-start">
+        <app-avatar [name]="store.user.fullName()" [tone]="profile.avatar" [size]="76" />
+      </div>
+      <div class="min-w-0 flex-1">
+        <p class="eyebrow">Perfil de estudiante</p>
+        <h2 class="mt-1 truncate text-xl font-medium text-ink">{{ store.user.fullName() }}</h2>
+        @if (store.subtitle()) {
+          <p class="mt-0.5 text-xs text-muted">{{ store.subtitle() }}</p>
+        }
+        @if (store.stats(); as stats) {
+          <p class="mt-3 flex flex-wrap gap-2">
+            <span class="rounded-full bg-surface-raised px-3 py-1 text-[11px] font-semibold text-ink shadow-soft">{{ stats.streakDays }} días de racha</span>
+            <span class="rounded-full bg-surface-raised px-3 py-1 text-[11px] font-semibold text-ink shadow-soft">{{ stats.studiedHours }} horas estudiadas</span>
+            @if (store.statsIsDemo) {
+              <span class="rounded-full bg-warning-soft px-3 py-1 text-[11px] font-semibold text-warning">Datos de demostración</span>
+            }
+          </p>
+        }
+      </div>
+      @if (!store.editing()) {
+        <button type="button" class="btn-ghost h-10 shrink-0 self-start sm:self-center" (click)="store.startEdit()">
+          <app-icon name="edit" [size]="16" /> Editar perfil
+        </button>
+      }
+    </section>
+
+    <!-- Datos personales -->
+    <section class="surface-card p-6 sm:p-7" aria-labelledby="personal-title">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <p class="eyebrow">Información</p>
+          <h2 id="personal-title" class="mt-1 flex items-center gap-2 text-lg font-medium text-ink">
+            Datos personales <app-icon name="verified_user" [size]="18" class="text-muted" />
+          </h2>
+        </div>
+      </div>
+
+      @if (store.editing()) {
+        <app-profile-form
+          [profile]="profile"
+          [academic]="store.academic()"
+          [saving]="store.saving()"
+          [saveError]="store.saveError()"
+          [fieldErrors]="store.fieldErrors()"
+          (save)="save($event)"
+          (cancelled)="store.cancelEdit()"
+        />
+      } @else {
+        <dl class="mt-5 grid gap-4 sm:grid-cols-2">
+          <div>
+            <dt class="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-muted">Nombre completo</dt>
+            <dd class="neu-well flex items-center gap-2.5 px-3.5 py-3 text-[13px] text-ink"><app-icon name="person" [size]="17" class="text-muted" /> {{ store.user.fullName() }}</dd>
+          </div>
+          <div>
+            <dt class="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-muted">Correo</dt>
+            <dd class="neu-well flex items-center gap-2.5 px-3.5 py-3 text-[13px] text-ink"><app-icon name="menu_book" [size]="17" class="text-muted" /> <span class="truncate">{{ profile.email }}</span></dd>
+          </div>
+          <div>
+            <dt class="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-muted">Carrera</dt>
+            <dd class="neu-well flex items-center gap-2.5 px-3.5 py-3 text-[13px]" [class]="store.academic().career ? 'text-ink' : 'text-muted'">
+              <app-icon name="menu_book" [size]="17" class="text-muted" />
+              {{ store.academic().career ?? (store.academicAvailable() ? 'Sin completar' : 'Pendiente de backend') }}
+            </dd>
+          </div>
+          <div>
+            <dt class="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-muted">Universidad</dt>
+            <dd class="neu-well flex items-center gap-2.5 px-3.5 py-3 text-[13px]" [class]="store.academic().university ? 'text-ink' : 'text-muted'">
+              <app-icon name="home" [size]="17" class="text-muted" />
+              {{ store.academic().university ?? (store.academicAvailable() ? 'Sin completar' : 'Pendiente de backend') }}
+            </dd>
+          </div>
+          <div>
+            <dt class="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-muted">Nombre de usuario</dt>
+            <dd class="neu-well flex items-center gap-2.5 px-3.5 py-3 text-[13px] text-ink"><app-icon name="alternate_email" [size]="17" class="text-muted" /> {{ profile.username }}</dd>
+          </div>
+        </dl>
+      }
+    </section>
+
+    <!-- Eliminar cuenta -->
+    <section class="flex flex-col gap-4 rounded-3xl bg-danger-soft p-6 shadow-soft sm:flex-row sm:items-center sm:justify-between" aria-labelledby="delete-title">
+      <div>
+        <h2 id="delete-title" class="text-[15px] font-semibold text-ink">Eliminar cuenta</h2>
+        <p class="mt-1 text-xs text-muted">Se borrarán tu perfil y tus datos. Esta acción no se puede deshacer.</p>
+      </div>
+      <button type="button" class="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-danger px-4 text-[13px] font-semibold text-white shadow-soft transition active:shadow-pressed" (click)="store.deleteOpen.set(true)">
+        <app-icon name="delete" [size]="16" /> Eliminar cuenta
+      </button>
+    </section>
+
+    <app-confirm-dialog
+      [open]="store.deleteOpen()"
+      heading="¿Eliminar tu cuenta?"
+      message="Perderás el acceso a tus salas y tu perfil se eliminará de forma permanente. Después se cerrará tu sesión."
+      confirmLabel="Sí, eliminar mi cuenta"
+      [pending]="store.deleting()"
+      [error]="store.deleteError()"
+      (confirmed)="store.deleteAccount()"
+      (closed)="store.deleteOpen.set(false)"
+    />
+  } @else {
+    <div class="h-48 animate-pulse rounded-3xl bg-skeleton" role="status"><span class="sr-only">Cargando tu perfil…</span></div>
+  }
+</div>

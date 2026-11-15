@@ -39,3 +39,8 @@ Después del redeploy en Vercel y de aplicar las rutas: revisar Network, login/c
 - Comprobación de navegador: archivos compilados servidos localmente bajo el origen Vercel interceptado y peticiones HTTPS de solo lectura contra la API pública. No equivale a publicar en Vercel.
 
 Los resultados se registran en `EVIDENCE-public-api.md`.
+
+## Pantallas pendientes de backend
+
+Dashboard, explorar salas, sala de estudio, perfil y configuración están construidos contra servicios
+abstractos con mocks. El contrato que falta publicar para conectarlos está en [BACKEND-PENDING.md](BACKEND-PENDING.md).

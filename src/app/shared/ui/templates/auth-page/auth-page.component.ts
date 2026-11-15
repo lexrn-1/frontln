@@ -23,9 +23,11 @@ export interface AuthTestimonial {
   template: `
     <div class="grid min-h-screen gap-4 bg-canvas p-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
       <div class="flex flex-col px-3 py-4 sm:px-8">
-        <a routerLink="/" aria-label="StudyRoom, volver al inicio" class="self-start rounded-xl">
-          <app-brand-logo />
-        </a>
+        <header>
+          <a routerLink="/" aria-label="StudyRoom, volver al inicio" class="inline-block rounded-xl">
+            <app-brand-logo />
+          </a>
+        </header>
         <main id="contenido" tabindex="-1" class="mx-auto flex w-full max-w-[400px] flex-1 flex-col justify-center py-10 outline-none">
           <p class="eyebrow">{{ eyebrow() }}</p>
           <h1 class="mt-2 text-[28px] font-semibold leading-tight text-ink">{{ heading() }}</h1>

@@ -74,6 +74,81 @@ features/<feature>/
 
 Layouts de página que componen organismos de `shared/` y alojan el `router-outlet` de las rutas hijas.
 
+## Pantallas privadas, shell y datos de dominio
+
+Rutas (`app.routes.ts`): `/dashboard`, `/explorar`, `/perfil` y `/configuracion` cuelgan del shell
+`layouts/app-shell` (barra lateral + cabecera + modales Crear/Unirse/Eliminar sala); `/salas/:id`
+(sala de estudio) va a pantalla completa. Todas usan `privateRouteGuard`, que equivale a
+`authGuard` salvo con el acceso de desarrollo activo (ver abajo). El login, el registro y
+`completar-perfil` no se modificaron (el login solo aloja el botón de desarrollo).
+
+Dado que un feature no puede importar de otro, los datos que comparten varias pantallas viven en
+`core/`, igual que la autenticación:
+
+```text
+core/
+├── rooms/          # Room, RoomsService (abstracto + HTTP pendiente + mock), RoomsStore, room-code
+├── study/          # StudyStats: racha, horas y ritmo semanal (service + mock + store)
+├── notifications/  # NotificationsStore (lista vacía hasta que exista contrato)
+├── layout/         # RoomDialogs (abre los modales del shell), Announcer (avisos accesibles)
+├── config/api-routes.ts   # rutas REST citadas por el plan de trabajo
+├── http/contract-pending.ts
+└── dev/            # ACCESO DE DESARROLLO (temporal)
+```
+
+Features nuevos, cada uno con `models/`, `services/` (abstracto + adaptador HTTP + mock en `mocks/`),
+`store/` y `*.providers.ts` cuando el adaptador se elige por ruta:
+
+| Feature | Ruta | Notas |
+| --- | --- | --- |
+| `dashboard` | `/dashboard` | `DashboardStore` solo compone `RoomsStore` y `StudyStatsStore` |
+| `explore-rooms` | `/explorar` | búsqueda con debounce, categorías, estados de carga/vacío/error |
+| `study-room` | `/salas/:id` | controles solo visuales; sin WebRTC ni Socket.IO |
+| `profile` | `/perfil` | ver/editar, validaciones, borrado de cuenta |
+| `settings` | `/configuracion` | preferencias de las capturas (notificaciones, privacidad, accesibilidad, idioma y zona horaria; solo se guardan en el navegador), cambio de correo con reautenticación y cierre de sesión |
+
+Componentes compartidos nuevos en `shared/ui/`: atoms `progress-ring`; molecules `modal-dialog`
+(`<dialog>` nativo), `confirm-dialog`, `search-box`, `filter-chips`, `empty-state`, `toast`;
+organisms `sidebar`, `topbar`, `notification-panel`, `room-card`, `create-room-dialog`,
+`join-room-dialog`. Todos son presentacionales; `shared/validators/room.validators.ts` añade las
+validaciones de nombre de sala y código. El formato del código lo aporta `core/rooms/room-code.ts`
+(provisional, ver BACKEND-PENDING.md) mediante un input, de modo que `shared` no depende de `core`.
+
+### Chat, archivos, tiempo real y tablero
+
+- `core/chat`: `ChatStore` es la **única** fuente del chat. El chat integrado de `/salas/:id` y `/chats` son dos interfaces
+  (`shared/ui/organisms/message-list` y `message-composer`) sobre el mismo store: no hay historiales duplicados ni arrays locales.
+  Capas: `models/chat.models.ts` (dominio) · `chat.dto.ts` (DTO propuestos) · `chat.mapper.ts` · `services/chat.service.ts`
+  (abstracto + HTTP) · `mocks/` · `store/`.
+- `core/files`: `FilesService` (multipart) + mock en memoria. Validación de adjuntos en `shared/utils/file-validation.ts`.
+- `core/realtime`: `RealtimeService` y eventos propuestos; solo existe el adaptador "no conectado" (sin Socket.IO instalado).
+- `core/interceptors/http-error.interceptor.ts`: convierte errores HTTP de la API propia en `AppError`, avisa una vez de 403/5xx/sin red y deja 400/404/409/422 a quien llama.
+- `core/http/feature-flag.ts` + `runtimeConfig.features`: los adaptadores de contratos *propuestos* no tocan la red hasta que backend confirme la ruta.
+- `features/chats`: `/chats` y `/chats/:roomId` (lista + conversación, móvil: lista primero). Verifica el id y la pertenencia antes de mostrar nada.
+- `features/study-room/board`: tablero (modelos, geometría, renderizador de canvas, exportación PNG/PDF propia, `BoardStore` con historial por página, servicio HTTP/mock) y `components/board/board-dialog`.
+- `features/study-room/services/media.service.ts` (captura local) y `peer-connections.service.ts` (WebRTC pendiente).
+- `features/not-found`: página 404 (`**`).
+
+Contratos y estado de cada funcionalidad: [BACKEND-INTEGRATION.md](BACKEND-INTEGRATION.md).
+
+### Mocks y adaptadores
+
+Cada servicio de datos es una clase abstracta con dos adaptadores: HTTP (`contractPending`, que
+devuelve el error `contract-pending` en lugar de inventar un contrato) y mock (datos de demostración
+en archivos `mocks/`, rotulados como tales en la interfaz). Se usa el mock si
+`runtimeConfig.useMocks` es `true` o si el acceso de desarrollo está activo; en cualquier otro caso,
+el adaptador HTTP. Ningún componente contiene datos simulados.
+
+### Acceso de desarrollo (temporal)
+
+`core/dev/`: botón "Entrar al panel (solo desarrollo)" en el login. Solo existe si
+`runtimeConfig.devAccess` es `true` **y** `isDevMode()` (por eso `angular.json` define las
+configuraciones `development` —usada por `ng serve`— y `production` —por defecto en `ng build`—).
+No toca `AuthStore`, Firebase ni los guards reales: guarda un indicador en `sessionStorage` que solo
+lee `privateRouteGuard`, y se activa/desactiva con una recarga completa para que la DI elija los mocks.
+Para retirarlo: borrar `core/dev/`, el `<app-dev-access-button>` del login, el uso de `DevAccess` en
+`CurrentUser` y en los `*.providers.ts`, y volver a `authGuard` en `app.routes.ts`.
+
 ## Estilos
 
 Todos los componentes se estilizan con Tailwind CSS usando los tokens del tema

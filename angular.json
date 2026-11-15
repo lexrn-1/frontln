@@ -24,13 +24,33 @@
             "assets": [
               "src/assets"
             ]
-          }
+          },
+          "configurations": {
+            "production": {
+              "outputHashing": "all"
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true
+            }
+          },
+          "defaultConfiguration": "production"
         },
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
           "options": {
             "buildTarget": "frontmeet:build"
-          }
+          },
+          "configurations": {
+            "production": {
+              "buildTarget": "frontmeet:build:production"
+            },
+            "development": {
+              "buildTarget": "frontmeet:build:development"
+            }
+          },
+          "defaultConfiguration": "development"
         },
         "test": {
           "builder": "@angular-devkit/build-angular:karma",

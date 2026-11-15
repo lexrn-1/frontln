@@ -42,6 +42,10 @@ function defaultCode(status: number): string {
   switch (status) {
     case 0:
       return 'network';
+    case 400:
+      return 'bad-request';
+    case 422:
+      return 'validation';
     case 401:
       return 'unauthorized';
     case 403:
@@ -65,6 +69,11 @@ function defaultMessage(status: number): string {
       return 'No tienes permiso para realizar esta acción.';
     case 409:
       return 'El recurso ya existe o está en conflicto.';
+    case 400:
+    case 422:
+      return 'Revisa los datos enviados e inténtalo de nuevo.';
+    case 404:
+      return 'No encontramos lo que buscas.';
     default:
       return 'El servidor no respondió como se esperaba. Inténtalo más tarde.';
   }

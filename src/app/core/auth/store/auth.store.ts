@@ -85,6 +85,8 @@ export class AuthStore {
     return this._status();
   }
   async completeProfile(req: CreateProfileRequest): Promise<void> { await this.createProfile(req); }
+  /** Sustituye el perfil en memoria tras una edición confirmada por el servidor (Mi perfil). */
+  applyProfile(profile: UserProfile): void { if (this._user()?.uid === profile.uid) this._profile.set(profile); }
   registerTeardown(fn: () => void): () => void { this.teardowns.add(fn); return () => this.teardowns.delete(fn); }
   async logout(options: { reason?: 'expired'; returnUrl?: string; revokeRemote?: boolean } = {}): Promise<void> {
     if (this.loggingOut) return;

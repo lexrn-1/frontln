@@ -151,11 +151,11 @@ $app-theme: mat.define-light-theme(
   }
 
   .eyebrow {
-    @apply text-[11px] font-bold uppercase tracking-[0.18em] text-primary;
+    @apply text-[11px] font-bold uppercase tracking-[0.18em] text-primary-ink;
   }
 
   .link-accent {
-    @apply font-semibold text-accent underline-offset-2 hover:underline;
+    @apply font-semibold text-primary-ink underline-offset-2 hover:underline;
   }
 }
 

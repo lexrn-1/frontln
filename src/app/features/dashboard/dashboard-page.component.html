@@ -1,0 +1,81 @@
+<div class="mx-auto max-w-6xl space-y-8">
+  @if (store.isDemo) {
+    <p class="rounded-xl bg-warning-soft px-4 py-2 text-xs font-medium text-warning" role="note">
+      Estás viendo datos de demostración (salas, estadísticas y agenda). No pertenecen a ningún usuario real.
+    </p>
+  }
+
+  <app-next-session-card
+    [next]="store.nextSession()"
+    [live]="store.liveRoom()"
+    [todayMinutes]="store.stats()?.todayMinutes ?? null"
+    [goalMinutes]="store.stats()?.dailyGoalMinutes ?? null"
+    [demo]="store.isDemo"
+    (prepare)="openRoom($event)"
+    (create)="dialogs.openCreate()"
+  />
+
+  <app-quick-actions (create)="dialogs.openCreate()" (join)="dialogs.openJoin()" />
+
+  <section aria-labelledby="my-rooms-title">
+    <div class="flex items-end justify-between gap-3">
+      <div>
+        <p class="eyebrow">Tus espacios</p>
+        <h2 id="my-rooms-title" class="mt-1.5 text-[26px] font-medium tracking-tight text-ink">Mis salas</h2>
+      </div>
+      <a routerLink="/explorar" class="inline-flex items-center gap-1 text-[13px] font-semibold text-primary">
+        Ver todas <app-icon name="arrow_forward" [size]="15" />
+      </a>
+    </div>
+
+    <div class="mt-4">
+      @switch (store.state()) {
+        @case ('error') {
+          <div class="surface-card">
+            <app-empty-state tone="error" icon="cloud_off" title="No pudimos cargar tus salas" [text]="store.error()">
+              <button type="button" class="btn-ghost h-10" (click)="store.reload()">Reintentar</button>
+            </app-empty-state>
+          </div>
+        }
+        @case ('ready') {
+          @if (store.roomViews().length) {
+            <ul class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+              @for (room of store.roomViews(); track room.id) {
+                <li>
+                  <app-room-card [room]="room" [deletable]="false" (enter)="openRoom($event)" (remove)="removeRoom($event)" (edit)="editRoom($event)" (copyCode)="copyCode($event)" />
+                </li>
+              }
+            </ul>
+          } @else {
+            <div class="surface-card">
+              <app-empty-state icon="meeting_room" title="Aún no tienes salas" text="Crea tu primera sala o únete a una con un código de invitación.">
+                <button type="button" class="btn-primary h-10" (click)="dialogs.openCreate()"><app-icon name="add" [size]="16" /> Crear una sala</button>
+                <button type="button" class="btn-ghost h-10" (click)="dialogs.openJoin()">Unirme con código</button>
+              </app-empty-state>
+            </div>
+          }
+        }
+        @default {
+          <ul class="grid gap-5 md:grid-cols-2 xl:grid-cols-3" role="status" aria-label="Cargando tus salas">
+            @for (n of skeletons; track n) {
+              <li class="h-[220px] animate-pulse rounded-3xl bg-skeleton"></li>
+            }
+          </ul>
+        }
+      }
+    </div>
+  </section>
+
+  <div class="grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+    <app-weekly-activity
+      [days]="store.stats()?.weekly ?? []"
+      [todayIndex]="store.stats()?.todayIndex ?? -1"
+      [changePercent]="store.stats()?.weeklyChangePercent ?? null"
+      [state]="store.statsState()"
+      [error]="store.statsError()"
+      [demo]="store.isDemo"
+      (retry)="store.reload()"
+    />
+    <app-agenda [entries]="store.agenda()" (open)="openRoom($event)" />
+  </div>
+</div>

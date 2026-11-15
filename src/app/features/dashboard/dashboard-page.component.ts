@@ -1,63 +1,63 @@
-import { Component, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
 
-import { AuthStore } from '../../core/auth/store/auth.store';
-import { AvatarComponent } from '../../shared/ui/atoms/avatar/avatar.component';
-import { BrandLogoComponent } from '../../shared/ui/atoms/brand-logo/brand-logo.component';
+import { Announcer } from '../../core/layout/announcer.service';
+import { RoomDialogs } from '../../core/layout/room-dialogs.service';
 import { IconComponent } from '../../shared/ui/atoms/icon/icon.component';
-import { SpinnerComponent } from '../../shared/ui/atoms/spinner/spinner.component';
+import { EmptyStateComponent } from '../../shared/ui/molecules/empty-state/empty-state.component';
+import { RoomCardComponent } from '../../shared/ui/organisms/room-card/room-card.component';
+import { copyText } from '../../shared/utils/clipboard';
+import { AgendaComponent } from './components/agenda.component';
+import { NextSessionCardComponent } from './components/next-session-card.component';
+import { QuickActionsComponent } from './components/quick-actions.component';
+import { WeeklyActivityComponent } from './components/weekly-activity.component';
+import { DashboardStore } from './store/dashboard.store';
 
 /**
- * Destino privado tras el login (ruta `/dashboard`, protegida por `authGuard`).
- * En Sprint 1 solo confirma la sesión; el panel completo (salas, agenda) llega en Sprint 2.
+ * Panel del estudiante (ruta `/dashboard`, dentro del shell). Solo presenta y delega: los datos
+ * salen de `DashboardStore` y los modales los gestiona el shell mediante `RoomDialogs`.
  */
 @Component({
   selector: 'app-dashboard-page',
   standalone: true,
-  imports: [AvatarComponent, BrandLogoComponent, IconComponent, RouterLink, SpinnerComponent],
-  template: `
-    <header class="flex items-center justify-between gap-4 px-4 py-5 sm:px-8">
-      <a routerLink="/" aria-label="StudyRoom, inicio" class="rounded-xl"><app-brand-logo /></a>
-      <div class="flex items-center gap-3">
-        <div class="flex items-center gap-2 rounded-xl bg-surface-raised py-1.5 pl-1.5 pr-3 shadow-soft">
-          <app-avatar [name]="auth.displayName()" [tone]="auth.profile()?.avatar ?? 'peach'" [size]="30" />
-          <span class="text-left leading-tight">
-            <span class="block text-[13px] font-semibold text-ink">{{ auth.displayName() }}</span>
-            <span class="block text-[11px] text-muted">&#64;{{ auth.profile()?.username }}</span>
-          </span>
-        </div>
-        <button type="button" class="btn-ghost h-10 text-primary" [disabled]="leaving()" (click)="logout()">
-          @if (leaving()) { <app-spinner /> } @else { <app-icon name="logout" [size]="18" /> }
-          Cerrar sesión
-        </button>
-      </div>
-    </header>
-
-    <main id="contenido" tabindex="-1" class="mx-auto max-w-5xl px-4 pb-16 outline-none sm:px-8">
-      <h1 class="mt-4 text-[28px] font-semibold text-ink">Hola, {{ auth.profile()?.nombres }}</h1>
-      <p class="mt-1 text-sm text-muted">¿Lista para avanzar con tus objetivos de hoy?</p>
-
-      <section class="mt-8 rounded-[28px] bg-surface-raised p-8 shadow-raised" aria-labelledby="empty-title">
-        <span class="neu-chip h-11 w-11 bg-primary-soft text-primary">
-          <app-icon name="meeting_room" [size]="22" />
-        </span>
-        <h2 id="empty-title" class="mt-5 text-xl font-semibold text-ink">Aún no tienes salas</h2>
-        <p class="mt-2 max-w-md text-sm text-muted">
-          Tu sesión está activa. La creación de salas y el panel completo llegan en el Sprint 2.
-        </p>
-        <button type="button" class="btn-primary mt-6" disabled aria-describedby="empty-title">
-          <app-icon name="add" [size]="18" /> Crear una sala
-        </button>
-      </section>
-    </main>
-  `
+  imports: [
+    AgendaComponent,
+    EmptyStateComponent,
+    IconComponent,
+    NextSessionCardComponent,
+    QuickActionsComponent,
+    RoomCardComponent,
+    RouterLink,
+    WeeklyActivityComponent
+  ],
+  providers: [DashboardStore],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './dashboard-page.component.html'
 })
 export class DashboardPageComponent {
-  protected readonly auth = inject(AuthStore);
-  protected readonly leaving = signal(false);
+  protected readonly store = inject(DashboardStore);
+  protected readonly dialogs = inject(RoomDialogs);
+  private readonly router = inject(Router);
+  private readonly announcer = inject(Announcer);
 
-  protected logout(): void {
-    this.leaving.set(true);
-    void this.auth.logout();
+  protected readonly skeletons = [1, 2, 3];
+
+  protected openRoom(id: string): void {
+    void this.router.navigate(['/salas', id]);
+  }
+
+  protected removeRoom(id: string): void {
+    const view = this.store.roomViews().find((r) => r.id === id);
+    if (view) this.dialogs.openRemove({ id, name: view.name });
+  }
+
+  protected editRoom(id: string): void {
+    const room = this.store.roomViews().find((r) => r.id === id);
+    if (room) this.dialogs.openEdit({ id, name: room.name });
+  }
+
+  protected async copyCode(id: string): Promise<void> {
+    if (await copyText(id)) this.announcer.announce(`Código ${id} copiado`);
+    else this.announcer.announce('No pudimos copiar el código. Cópialo manualmente.', 'error');
   }
 }

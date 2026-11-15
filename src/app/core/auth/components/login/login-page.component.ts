@@ -10,6 +10,7 @@ import { FormFieldComponent } from '../../../../shared/ui/molecules/form-field/f
 import { AuthPageComponent } from '../../../../shared/ui/templates/auth-page/auth-page.component';
 import { controlError, focusFirstInvalid } from '../../../../shared/utils/form-errors';
 import { runtimeConfig } from '../../../config/runtime-config';
+import { DevAccessButtonComponent } from '../../../dev/dev-access-button.component';
 import { AppError } from '../../../http/app-error';
 import { safeReturnUrl } from '../../../utils/safe-return-url';
 import { SessionStatus } from '../../models/auth.models';
@@ -21,6 +22,7 @@ import { AuthStore } from '../../store/auth.store';
   standalone: true,
   imports: [
     AuthPageComponent,
+    DevAccessButtonComponent,
     FormFieldComponent,
     GoogleMarkComponent,
     IconComponent,

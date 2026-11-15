@@ -1,10 +1,21 @@
 import { Routes } from '@angular/router';
 
-import { authGuard, guestGuard, incompleteProfileGuard } from './core/auth/guards/auth.guards';
+import { guestGuard, incompleteProfileGuard } from './core/auth/guards/auth.guards';
+// Las rutas privadas usan `privateRouteGuard`, que equivale a `authGuard` salvo cuando el acceso de
+// desarrollo (core/dev) está activo. Al retirarlo, volver a importar `authGuard` y usarlo aquí.
+import { privateRouteGuard } from './core/dev/dev-access';
+import type { ShellHeaderData } from './layouts/app-shell/app-shell.component';
+import { provideProfile } from './features/profile/profile.providers';
+import { provideSettings } from './features/settings/settings.providers';
+import { provideStudyRoom } from './features/study-room/study-room.providers';
+
+/** Cabecera del shell por pantalla (ver `ShellHeaderData`). */
+const header = (data: ShellHeaderData) => ({ header: data });
 
 /**
- * Rutas de Sprint 0–1 (plan de trabajo). Pendientes para sprints siguientes:
- * `/perfil` (Sprint 2) y `/salas/:id` (Sprint 3), ambas con `authGuard`.
+ * Rutas del plan de trabajo: /registro, /login, /completar-perfil, /dashboard, /perfil y
+ * /salas/:id, más /explorar y /configuracion de las capturas de referencia. Las pantallas con
+ * navegación lateral cuelgan del shell; la sala de estudio va a pantalla completa.
  */
 export const routes: Routes = [
   {
@@ -36,10 +47,64 @@ export const routes: Routes = [
       )
   },
   {
-    path: 'dashboard',
-    title: 'Inicio',
-    canActivate: [authGuard],
-    loadComponent: () => import('./features/dashboard/dashboard-page.component').then((m) => m.DashboardPageComponent)
+    path: '',
+    canActivate: [privateRouteGuard],
+    loadComponent: () => import('./layouts/app-shell/app-shell.component').then((m) => m.AppShellComponent),
+    children: [
+      {
+        path: 'dashboard',
+        title: 'Inicio',
+        data: header({ title: 'Inicio', subtitle: '¿Lista para avanzar con tus objetivos de hoy?', greeting: true }),
+        loadComponent: () =>
+          import('./features/dashboard/dashboard-page.component').then((m) => m.DashboardPageComponent)
+      },
+      {
+        path: 'explorar',
+        title: 'Explorar salas',
+        data: header({ title: 'Explorar salas', subtitle: 'Encuentra un grupo que estudie lo mismo que tú.' }),
+        loadComponent: () =>
+          import('./features/explore-rooms/explore-rooms-page.component').then((m) => m.ExploreRoomsPageComponent)
+      },
+      {
+        path: 'chats',
+        title: 'Chats',
+        data: header({ title: 'Chats', subtitle: 'Tus conversaciones de estudio, en un solo lugar.' }),
+        loadComponent: () => import('./features/chats/chats-page.component').then((m) => m.ChatsPageComponent)
+      },
+      {
+        path: 'chats/:roomId',
+        title: 'Conversación',
+        data: header({ title: 'Chats', subtitle: 'Tus conversaciones de estudio, en un solo lugar.' }),
+        loadComponent: () => import('./features/chats/chats-page.component').then((m) => m.ChatsPageComponent)
+      },
+      {
+        path: 'perfil',
+        title: 'Mi perfil',
+        data: header({ title: 'Mi perfil', subtitle: 'Gestiona tu información personal y tu progreso.' }),
+        providers: [provideProfile()],
+        loadComponent: () => import('./features/profile/profile-page.component').then((m) => m.ProfilePageComponent)
+      },
+      {
+        path: 'configuracion',
+        title: 'Configuración',
+        data: header({ title: 'Configuración', subtitle: 'Personaliza StudyRoom para que funcione a tu manera.' }),
+        providers: [provideSettings()],
+        loadComponent: () =>
+          import('./features/settings/settings-page.component').then((m) => m.SettingsPageComponent)
+      }
+    ]
   },
-  { path: '**', redirectTo: '' }
+  {
+    path: 'salas/:id',
+    title: 'Sala de estudio',
+    canActivate: [privateRouteGuard],
+    providers: [provideStudyRoom()],
+    loadComponent: () =>
+      import('./features/study-room/study-room-page.component').then((m) => m.StudyRoomPageComponent)
+  },
+  {
+    path: '**',
+    title: 'Página no encontrada',
+    loadComponent: () => import('./features/not-found/not-found-page.component').then((m) => m.NotFoundPageComponent)
+  }
 ];

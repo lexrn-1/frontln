@@ -13,10 +13,36 @@ export const runtimeConfig = {
   realtimeUrl: 'https://api.5-253-232-179.sslip.io',
   healthUrl: 'https://api.5-253-232-179.sslip.io/q/health/ready',
   socketPath: '/socket.io/',
+  /**
+   * Funcionalidades cuyo contrato HTTP está PROPUESTO por el frontend pero aún no existe en backend
+   * (docs/BACKEND-INTEGRATION.md). Con `false` el adaptador HTTP no hace peticiones y devuelve
+   * `contract-pending`; ponerlo en `true` solo cuando backend publique la ruta.
+   */
+  features: {
+    chatApi: false,
+    filesApi: false,
+    boardApi: false
+  },
+  /** Chat: tamaño de página del historial. */
+  chat: { pageSize: 30 },
+  /** Paginación por defecto de los listados. */
+  pagination: { defaultPageSize: 20 },
+  /** Archivos adjuntos (el backend debe validar también). */
+  files: {
+    maxSizeBytes: 10 * 1024 * 1024,
+    maxFiles: 5,
+    allowedExtensions: ['png', 'jpg', 'jpeg', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'ppt', 'pptx', 'txt']
+  },
   /** Usa adaptadores simulados de backend-api en lugar de HTTP. */
   useMocks: false,
   /** Usa Firebase Auth real en lugar de la identidad simulada. */
   useFirebaseAuth: true,
+  /**
+   * TEMPORAL. Habilita el botón "Acceso de desarrollo" del login (ver `core/dev/`). Solo surte
+   * efecto con `isDevMode()`: los builds de producción lo ignoran aunque esté en `true`.
+   * Ponerlo en `false` (o borrar `core/dev/`) al terminar la integración con el backend.
+   */
+  devAccess: true,
   /** Latencia simulada de los mocks, para ver estados de carga. */
   mockLatencyMs: 650,
   /**

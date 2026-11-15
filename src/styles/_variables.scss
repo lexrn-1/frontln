@@ -1,21 +1,24 @@
 // Tema StudyRoom: claro, cálido y suave (ver docs/guia y el prototipo en PDF).
+// Coral, texto secundario y colores de estado ajustados para WCAG 2.2 AA (>= 4.5:1 sobre sus fondos).
 $color-primary: #ef6f5e;
 $color-primary-dark: #d9584a;
+// Coral oscuro solo para texto pequeño (>= 4,5:1); fondos y botones usan el coral de marca.
+$color-primary-ink: #b93a27;
 $color-primary-soft: #fbe4df;
 $color-accent: #e2604f;
 $color-canvas: #f3efea;
 $color-surface: #f4f0eb;
 $color-surface-raised: #f7f4f0;
 $color-ink: #1f1c1a;
-$color-muted: #847d76;
+$color-muted: #625b54;
 $color-border: #e6e0d9;
 $color-border-strong: #d6cec5;
 $color-skeleton: #ece6df;
-$color-danger: #c94b3d;
+$color-danger: #a8352a;
 $color-danger-soft: #fbe6e2;
-$color-success: #4f8a69;
+$color-success: #2f6b4a;
 $color-success-soft: #dceadf;
-$color-warning: #b7832f;
+$color-warning: #76530f;
 $color-warning-soft: #f6ead2;
 $color-danger-warm: #d97762;
 $color-success-muted: #7aa88f;
@@ -33,6 +36,7 @@ $color-lavender-soft: #ebe4f0;
 :root {
   --color-primary: #{$color-primary};
   --color-primary-dark: #{$color-primary-dark};
+  --color-primary-ink: #{$color-primary-ink};
   --color-primary-soft: #{$color-primary-soft};
   --color-accent: #{$color-accent};
   --color-canvas: #{$color-canvas};
