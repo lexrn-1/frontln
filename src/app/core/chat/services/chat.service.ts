@@ -1,6 +1,10 @@
+import { RoomsService, HttpRoomsService } from '../../rooms/services/rooms.service';
+import { Room } from '../../rooms/models/room.models';
+import { RealtimeService } from '../../realtime/realtime.service';
+import { toneFor } from '../models/chat.mapper';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, map } from 'rxjs';
+import { Observable, map, from, of } from 'rxjs';
 
 import { CurrentUser } from '../../auth/store/current-user.store';
 import { apiRoutes } from '../../config/api-routes';
@@ -10,11 +14,6 @@ import { ConversationDto, MessageDto, MessagePageDto, SendMessageRequestDto, Unr
 import { toConversation, toMessage, toMessagePage } from '../models/chat.mapper';
 import { ChatMessage, Conversation, MessagePage, MessageQuery, SendMessageRequest } from '../models/chat.models';
 
-/**
- * Acceso a datos del chat (sin estado). Es la ÚNICA puerta al historial: el chat integrado en la
- * sala y `/chats` pasan por `ChatStore`, que usa este servicio. Contrato PROPUESTO
- * (PENDIENTE DE IMPLEMENTACIÓN EN BACKEND), ver docs/BACKEND-INTEGRATION.md.
- */
 export abstract class ChatService {
   abstract readonly isDemo: boolean;
   /** Conversaciones (una por sala) del usuario, con último mensaje y no leídos. */
@@ -38,44 +37,52 @@ export class HttpChatService extends ChatService {
     return this.user.profile()?.uid ?? null;
   }
 
+  private readonly rooms = inject(RoomsService);
+  private readonly realtime = inject(RealtimeService);
+  private conversation(r: Room): Conversation {
+    return {
+      roomId: r.id,
+      name: r.name,
+      subject: '',
+      tone: toneFor(r.id),
+      participantCount: 0,
+      unreadCount: 0,
+      lastActivityAt: null,
+      lastMessage: null,
+    };
+  }
   listConversations(): Observable<Conversation[]> {
-    return whenEnabled('chatApi', `GET ${apiRoutes.chats}`, () =>
-      this.http.get<ConversationDto[]>(`${this.base}${apiRoutes.chats}`).pipe(map((list) => list.map((c) => toConversation(c, this.uid))))
-    );
+    const source = this.rooms instanceof HttpRoomsService ? this.rooms.list('member') : this.rooms.listMine();
+    return source.pipe(map((rooms) => rooms.map((r) => this.conversation(r))));
   }
-
   getConversation(roomId: string): Observable<Conversation> {
-    return whenEnabled('chatApi', `GET ${apiRoutes.chat(roomId)}`, () =>
-      this.http.get<ConversationDto>(`${this.base}${apiRoutes.chat(roomId)}`).pipe(map((c) => toConversation(c, this.uid)))
-    );
+    return this.rooms.getById(roomId).pipe(map((r) => this.conversation(r)));
   }
-
   listMessages(roomId: string, query: MessageQuery): Observable<MessagePage> {
-    return whenEnabled('chatApi', `GET ${apiRoutes.chatMessages(roomId)}`, () => {
-      let params = new HttpParams().set('limit', query.limit);
-      if (query.before) params = params.set('before', query.before);
-      return this.http
-        .get<MessagePageDto>(`${this.base}${apiRoutes.chatMessages(roomId)}`, { params })
-        .pipe(map((page) => toMessagePage(page, this.uid)));
-    });
+    let params = new HttpParams().set('limit', query.limit);
+    if (query.before) params = params.set('before', query.before);
+    if (query.after) params = params.set('after', query.after);
+    return this.http
+      .get<MessagePageDto>(`${this.base}${apiRoutes.roomMessages(roomId)}`, {
+        params,
+      })
+      .pipe(map((page) => toMessagePage(page, this.uid)));
   }
-
   sendMessage(roomId: string, request: SendMessageRequest): Observable<ChatMessage> {
-    return whenEnabled('chatApi', `POST ${apiRoutes.chatMessages(roomId)}`, () => {
-      const body: SendMessageRequestDto = { ...request };
-      return this.http.post<MessageDto>(`${this.base}${apiRoutes.chatMessages(roomId)}`, body).pipe(map((m) => toMessage(m, this.uid)));
-    });
+    return from(
+      this.realtime.enter(roomId).then(() =>
+        this.realtime.request<MessageDto>('chat:send', roomId, {
+          text: request.text,
+          clientMessageId: request.clientMessageId,
+        })
+      )
+    ).pipe(map((m) => toMessage(m, this.uid)));
   }
-
-  markRead(roomId: string): Observable<void> {
-    return whenEnabled('chatApi', `PATCH ${apiRoutes.chatRead(roomId)}`, () =>
-      this.http.patch<void>(`${this.base}${apiRoutes.chatRead(roomId)}`, null)
-    );
+  // No existe persistencia de lecturas/no leídos en este alcance.
+  markRead(_roomId: string): Observable<void> {
+    return of(undefined);
   }
-
   unreadCount(): Observable<number> {
-    return whenEnabled('chatApi', `GET ${apiRoutes.chatsUnread}`, () =>
-      this.http.get<UnreadCountDto>(`${this.base}${apiRoutes.chatsUnread}`).pipe(map((r) => r.total))
-    );
+    return of(0);
   }
 }

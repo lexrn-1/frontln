@@ -23,23 +23,38 @@ const TONES: Record<RoomCategory, RoomView['tone']> = {
   ciencias: 'mint',
   derecho: 'lavender',
   idiomas: 'sky',
-  otras: 'peach'
+  otras: 'peach',
 };
 
 export function toRoomView(room: Room, now: Date = new Date()): RoomView {
   return {
     id: room.id,
     name: room.name,
-    subjectLabel: room.subject || ROOM_CATEGORY_LABELS[room.category],
-    initial: room.category === 'matematicas' ? '∫' : room.category === 'programacion' ? '</>' : (room.subject || room.name).charAt(0).toUpperCase(),
+    subjectLabel: room.minimal
+      ? room.isHost
+        ? 'Administrador'
+        : 'Participante'
+      : room.subject || ROOM_CATEGORY_LABELS[room.category],
+    initial:
+      room.category === 'matematicas'
+        ? '∫'
+        : room.category === 'programacion'
+          ? '</>'
+          : (room.subject || room.name).charAt(0).toUpperCase(),
     tone: TONES[room.category],
-    participantsLabel: room.participantCount === 1 ? '1 persona' : `${room.participantCount} personas`,
-    scheduleLabel:
-      room.status === 'live'
+    participantsLabel: room.minimal
+      ? ''
+      : room.participantCount === 1
+        ? '1 persona'
+        : `${room.participantCount} personas`,
+    scheduleLabel: room.minimal
+      ? ''
+      : room.status === 'live'
         ? 'En curso'
-        : ((room.schedule && recurringLabel(room.schedule)) ?? (room.startsAt ? scheduleLabel(room.startsAt, now) : 'Sin horario')),
+        : ((room.schedule && recurringLabel(room.schedule)) ??
+          (room.startsAt ? scheduleLabel(room.startsAt, now) : 'Sin horario')),
     live: room.status === 'live',
     isHost: room.isHost,
-    isMember: room.isMember
+    isMember: room.isMember,
   };
 }

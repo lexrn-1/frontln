@@ -23,7 +23,7 @@ const TONE_CLASSES: Record<RoomCardView['tone'], string> = {
   mint: 'bg-tile-mint text-success',
   lavender: 'bg-lavender text-ink',
   sky: 'bg-tile-sky text-ink',
-  peach: 'bg-tile-peach text-ink'
+  peach: 'bg-tile-peach text-ink',
 };
 
 /** Tarjeta de sala (panel y "Explorar salas"). Solo emite eventos; no conoce servicios ni rutas. */
@@ -33,9 +33,17 @@ const TONE_CLASSES: Record<RoomCardView['tone'], string> = {
   imports: [CdkMenu, CdkMenuItem, CdkMenuTrigger, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <article class="flex h-full flex-col rounded-[28px] bg-surface-raised p-6 shadow-raised" [attr.aria-label]="room().name">
+    <article
+      class="flex h-full flex-col rounded-[28px] bg-surface-raised p-6 shadow-raised"
+      [attr.aria-label]="room().name"
+    >
       <div class="flex items-start justify-between">
-        <span class="neu-chip h-12 w-12 rounded-2xl font-display text-lg font-semibold" [class]="tone()" aria-hidden="true">{{ room().initial }}</span>
+        <span
+          class="neu-chip h-12 w-12 rounded-2xl font-display text-lg font-semibold"
+          [class]="tone()"
+          aria-hidden="true"
+          >{{ room().initial }}</span
+        >
         <button
           type="button"
           class="grid h-8 w-8 place-items-center rounded-lg text-muted transition hover:text-ink"
@@ -47,16 +55,36 @@ const TONE_CLASSES: Record<RoomCardView['tone'], string> = {
       </div>
 
       <p class="eyebrow mt-5 !text-[10px]">{{ room().subjectLabel }}</p>
-      <h3 class="mt-1.5 text-[18px] font-medium leading-snug text-ink">{{ room().name }}</h3>
+      <h3 class="mt-1.5 text-[18px] font-medium leading-snug text-ink">
+        {{ room().name }}
+      </h3>
       <p class="mt-1.5 flex items-center gap-1.5 text-[11px] text-muted">
-        ID <span class="font-display font-bold tracking-wide text-ink">{{ room().id }}</span>
-        <button type="button" class="grid h-6 w-6 place-items-center rounded-md text-muted transition hover:text-ink" [attr.aria-label]="'Copiar ID de ' + room().name" (click)="copyCode.emit(room().id)"><app-icon name="content_copy" [size]="14" /></button>
+        ID
+        <span class="break-all font-display font-bold text-ink">{{ room().id }}</span>
+        <button
+          type="button"
+          class="grid h-6 w-6 place-items-center rounded-md text-muted transition hover:text-ink"
+          [attr.aria-label]="'Copiar ID de ' + room().name"
+          (click)="copyCode.emit(room().id)"
+        >
+          <app-icon name="content_copy" [size]="14" />
+        </button>
       </p>
       <p class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted">
-        <span class="inline-flex items-center gap-1.5"><app-icon name="group" [size]="16" />{{ room().participantsLabel }}</span>
-        <span class="inline-flex items-center gap-1.5" [class.text-primary]="room().live" [class.font-semibold]="room().live">
-          <app-icon name="schedule" [size]="16" />{{ room().scheduleLabel }}
-        </span>
+        @if (room().participantsLabel) {
+          <span class="inline-flex items-center gap-1.5"
+            ><app-icon name="group" [size]="16" />{{ room().participantsLabel }}</span
+          >
+        }
+        @if (room().scheduleLabel) {
+          <span
+            class="inline-flex items-center gap-1.5"
+            [class.text-primary]="room().live"
+            [class.font-semibold]="room().live"
+          >
+            <app-icon name="schedule" [size]="16" />{{ room().scheduleLabel }}
+          </span>
+        }
       </p>
 
       <div class="neu-groove mt-5"></div>
@@ -82,17 +110,27 @@ const TONE_CLASSES: Record<RoomCardView['tone'], string> = {
     <ng-template #menu>
       <div cdkMenu class="min-w-48 rounded-xl bg-surface-raised p-1.5 shadow-raised" aria-label="Opciones de la sala">
         @if (room().isHost) {
-          <button cdkMenuItem type="button" class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] font-medium text-ink hover:bg-surface focus-visible:bg-surface" (click)="edit.emit(room().id)">
+          <button
+            cdkMenuItem
+            type="button"
+            class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] font-medium text-ink hover:bg-surface focus-visible:bg-surface"
+            (click)="edit.emit(room().id)"
+          >
             <app-icon name="edit" [size]="16" /> Editar nombre
           </button>
         }
-        <button cdkMenuItem type="button" class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] font-medium text-ink hover:bg-surface focus-visible:bg-surface" (click)="copyCode.emit(room().id)">
+        <button
+          cdkMenuItem
+          type="button"
+          class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] font-medium text-ink hover:bg-surface focus-visible:bg-surface"
+          (click)="copyCode.emit(room().id)"
+        >
           <app-icon name="content_copy" [size]="16" /> Copiar código ({{ room().id }})
         </button>
       </div>
     </ng-template>
   `,
-  host: { class: 'block' }
+  host: { class: 'block' },
 })
 export class RoomCardComponent {
   readonly room = input.required<RoomCardView>();

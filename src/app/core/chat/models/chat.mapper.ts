@@ -11,28 +11,38 @@ export function toneFor(key: string): AvatarTone {
 }
 
 export function toAttachment(dto: AttachmentDto): FileAttachment {
-  return { id: dto.id, name: dto.fileName, size: dto.size, mimeType: dto.contentType };
+  return {
+    id: dto.id,
+    name: dto.fileName,
+    size: dto.size,
+    mimeType: dto.contentType,
+  };
 }
 
 export function toMessage(dto: MessageDto, selfUid: string | null): ChatMessage {
   const name = dto.sender.displayName || 'Participante';
   return {
     id: dto.id,
+    cursor: dto.cursor,
     roomId: dto.roomId,
     authorId: dto.sender.uid,
     authorName: name,
     authorInitial: name.trim().charAt(0).toUpperCase(),
-    tone: (TONES as string[]).includes(dto.sender.avatar ?? '') ? (dto.sender.avatar as AvatarTone) : toneFor(dto.sender.uid),
+    tone: (TONES as string[]).includes(dto.sender.avatar ?? '')
+      ? (dto.sender.avatar as AvatarTone)
+      : toneFor(dto.sender.uid),
     text: dto.text,
     attachments: (dto.attachments ?? []).map(toAttachment),
     sentAt: dto.createdAt,
-    own: !!selfUid && dto.sender.uid === selfUid
+    own: !!selfUid && dto.sender.uid === selfUid,
   };
 }
 
 export function toMessagePage(dto: MessagePageDto, selfUid: string | null): MessagePage {
   // El backend entrega de más reciente a más antiguo; la interfaz los muestra en orden cronológico.
-  const messages = dto.items.map((m) => toMessage(m, selfUid)).sort((a, b) => a.sentAt.localeCompare(b.sentAt));
+  const messages = dto.items
+    .map((m) => toMessage(m, selfUid))
+    .sort((a, b) => a.sentAt.localeCompare(b.sentAt) || a.id.localeCompare(b.id));
   return { messages, nextCursor: dto.nextCursor };
 }
 
@@ -46,8 +56,13 @@ export function toConversation(dto: ConversationDto, selfUid: string | null): Co
     participantCount: dto.participantCount,
     unreadCount: dto.unreadCount,
     lastMessage: last
-      ? { text: last.text, authorName: last.own ? 'Tú' : last.authorName, sentAt: last.sentAt, hasAttachments: last.attachments.length > 0 }
+      ? {
+          text: last.text,
+          authorName: last.own ? 'Tú' : last.authorName,
+          sentAt: last.sentAt,
+          hasAttachments: last.attachments.length > 0,
+        }
       : null,
-    lastActivityAt: dto.lastActivityAt ?? last?.sentAt ?? null
+    lastActivityAt: dto.lastActivityAt ?? last?.sentAt ?? null,
   };
 }

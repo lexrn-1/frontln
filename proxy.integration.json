@@ -1,0 +1,22 @@
+{
+  "/api/v1/rooms/*/messages": {
+    "target": "http://127.0.0.1:20881",
+    "secure": false
+  },
+  "/api": {
+    "target": "http://127.0.0.1:20880",
+    "secure": false
+  },
+  "/q": {
+    "target": "http://127.0.0.1:20880",
+    "secure": false
+  },
+  "/socket.io": {
+    "target": "http://127.0.0.1:20992",
+    "secure": false,
+    "ws": true,
+    "headers": {
+      "Origin": "http://localhost:4200"
+    }
+  }
+}

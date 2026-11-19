@@ -1,11 +1,15 @@
-/**
- * Modelos de dominio de salas (visuales, en español). Los DTO "wire" de backend se añadirán en
- * `rooms/models/room.dto.ts` con su mapper cuando exista el contrato (docs/BACKEND-PENDING.md).
- *
- * Campos que el plan de trabajo NO define y que backend debe confirmar: `subject`, `category`,
- * `participantCount`, `status` y `startsAt` (el plan solo habla de nombre, ID y anfitrión).
+/** Modelo de presentación compartido por tarjetas y stores.
+ * El contrato REST mínimo está en room.dto.ts; minimal oculta metadatos exclusivos de muestras.
  */
-export const ROOM_CATEGORIES = ['programacion', 'matematicas', 'ciencias', 'literatura', 'derecho', 'idiomas', 'otras'] as const;
+export const ROOM_CATEGORIES = [
+  'programacion',
+  'matematicas',
+  'ciencias',
+  'literatura',
+  'derecho',
+  'idiomas',
+  'otras',
+] as const;
 export type RoomCategory = (typeof ROOM_CATEGORIES)[number];
 
 export const ROOM_CATEGORY_LABELS: Record<RoomCategory, string> = {
@@ -15,7 +19,7 @@ export const ROOM_CATEGORY_LABELS: Record<RoomCategory, string> = {
   literatura: 'Literatura',
   derecho: 'Derecho',
   idiomas: 'Idiomas',
-  otras: 'Otras'
+  otras: 'Otras',
 };
 
 /** `live`: sesión en curso · `scheduled`: con horario futuro · `idle`: sin sesión programada. */
@@ -33,6 +37,8 @@ export interface RoomSchedule {
 }
 
 export interface Room {
+  /** Contrato mínimo: sin catálogo, horario ni recuento persistente. */
+  minimal?: boolean;
   /** ID de la sala; funciona también como código de invitación (plan de trabajo). */
   id: string;
   name: string;

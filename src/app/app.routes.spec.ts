@@ -16,7 +16,9 @@ describe('route table', () => {
 
   it('protects every private route', () => {
     expect(shell.canActivate).toEqual([privateRouteGuard]);
-    ['dashboard', 'explorar', 'chats', 'chats/:roomId', 'perfil', 'configuracion'].forEach((p) => expect(childPaths).toContain(p));
+    ['dashboard', 'explorar', 'chats', 'chats/:roomId', 'perfil', 'configuracion'].forEach((p) =>
+      expect(childPaths).toContain(p)
+    );
     expect(routes.find((r) => r.path === 'salas/:id')?.canActivate).toEqual([privateRouteGuard]);
   });
 
@@ -28,8 +30,8 @@ describe('route table', () => {
   });
 
   it('rejects malformed room ids before calling the API', () => {
-    expect(isPlausibleRoomId('SR-84K2')).toBeTrue();
-    expect(isPlausibleRoomId('abc123XYZ_-')).toBeTrue();
+    expect(isPlausibleRoomId('SR-84K2')).toBeFalse();
+    expect(isPlausibleRoomId('40b4c52b-ab39-4f52-a897-322a175eaa97')).toBeTrue();
     expect(isPlausibleRoomId('')).toBeFalse();
     expect(isPlausibleRoomId('../etc')).toBeFalse();
     expect(isPlausibleRoomId('a b')).toBeFalse();

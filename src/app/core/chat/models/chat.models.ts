@@ -13,6 +13,7 @@ export interface FileAttachment {
 }
 
 export interface ChatMessage {
+  cursor?: string;
   id: string;
   roomId: string;
   authorId: string;
@@ -54,6 +55,7 @@ export interface MessagePage {
 export interface MessageQuery {
   /** Cursor devuelto por la página anterior; sin él se piden los últimos mensajes. */
   before?: string | null;
+  after?: string | null;
   limit: number;
 }
 

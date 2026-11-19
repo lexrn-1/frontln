@@ -22,20 +22,20 @@ export const routes: Routes = [
     path: '',
     pathMatch: 'full',
     title: 'Estudiar juntos lo cambia todo',
-    loadComponent: () => import('./features/landing/landing-page.component').then((m) => m.LandingPageComponent)
+    loadComponent: () => import('./features/landing/landing-page.component').then((m) => m.LandingPageComponent),
   },
   {
     path: 'registro',
     title: 'Crear cuenta',
     canActivate: [guestGuard],
     loadComponent: () =>
-      import('./core/auth/components/register/register-page.component').then((m) => m.RegisterPageComponent)
+      import('./core/auth/components/register/register-page.component').then((m) => m.RegisterPageComponent),
   },
   {
     path: 'login',
     title: 'Iniciar sesión',
     canActivate: [guestGuard],
-    loadComponent: () => import('./core/auth/components/login/login-page.component').then((m) => m.LoginPageComponent)
+    loadComponent: () => import('./core/auth/components/login/login-page.component').then((m) => m.LoginPageComponent),
   },
   {
     path: 'completar-perfil',
@@ -44,7 +44,7 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./core/auth/components/complete-profile/complete-profile-page.component').then(
         (m) => m.CompleteProfilePageComponent
-      )
+      ),
   },
   {
     path: '',
@@ -56,43 +56,39 @@ export const routes: Routes = [
         title: 'Inicio',
         data: header({ title: 'Inicio', subtitle: '¿Lista para avanzar con tus objetivos de hoy?', greeting: true }),
         loadComponent: () =>
-          import('./features/dashboard/dashboard-page.component').then((m) => m.DashboardPageComponent)
+          import('./features/dashboard/dashboard-page.component').then((m) => m.DashboardPageComponent),
       },
       {
         path: 'explorar',
-        title: 'Explorar salas',
-        data: header({ title: 'Explorar salas', subtitle: 'Encuentra un grupo que estudie lo mismo que tú.' }),
-        loadComponent: () =>
-          import('./features/explore-rooms/explore-rooms-page.component').then((m) => m.ExploreRoomsPageComponent)
+        redirectTo: 'dashboard',
       },
       {
         path: 'chats',
         title: 'Chats',
         data: header({ title: 'Chats', subtitle: 'Tus conversaciones de estudio, en un solo lugar.' }),
-        loadComponent: () => import('./features/chats/chats-page.component').then((m) => m.ChatsPageComponent)
+        loadComponent: () => import('./features/chats/chats-page.component').then((m) => m.ChatsPageComponent),
       },
       {
         path: 'chats/:roomId',
         title: 'Conversación',
         data: header({ title: 'Chats', subtitle: 'Tus conversaciones de estudio, en un solo lugar.' }),
-        loadComponent: () => import('./features/chats/chats-page.component').then((m) => m.ChatsPageComponent)
+        loadComponent: () => import('./features/chats/chats-page.component').then((m) => m.ChatsPageComponent),
       },
       {
         path: 'perfil',
         title: 'Mi perfil',
         data: header({ title: 'Mi perfil', subtitle: 'Gestiona tu información personal y tu progreso.' }),
         providers: [provideProfile()],
-        loadComponent: () => import('./features/profile/profile-page.component').then((m) => m.ProfilePageComponent)
+        loadComponent: () => import('./features/profile/profile-page.component').then((m) => m.ProfilePageComponent),
       },
       {
         path: 'configuracion',
         title: 'Configuración',
         data: header({ title: 'Configuración', subtitle: 'Personaliza StudyRoom para que funcione a tu manera.' }),
         providers: [provideSettings()],
-        loadComponent: () =>
-          import('./features/settings/settings-page.component').then((m) => m.SettingsPageComponent)
-      }
-    ]
+        loadComponent: () => import('./features/settings/settings-page.component').then((m) => m.SettingsPageComponent),
+      },
+    ],
   },
   {
     path: 'salas/:id',
@@ -100,11 +96,11 @@ export const routes: Routes = [
     canActivate: [privateRouteGuard],
     providers: [provideStudyRoom()],
     loadComponent: () =>
-      import('./features/study-room/study-room-page.component').then((m) => m.StudyRoomPageComponent)
+      import('./features/study-room/study-room-page.component').then((m) => m.StudyRoomPageComponent),
   },
   {
     path: '**',
     title: 'Página no encontrada',
-    loadComponent: () => import('./features/not-found/not-found-page.component').then((m) => m.NotFoundPageComponent)
-  }
+    loadComponent: () => import('./features/not-found/not-found-page.component').then((m) => m.NotFoundPageComponent),
+  },
 ];

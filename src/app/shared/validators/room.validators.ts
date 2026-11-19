@@ -1,7 +1,7 @@
 import { AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
 
 /** Longitud máxima propuesta para el nombre de sala (el plan pide manejar "longitud excesiva"; límite por confirmar). */
-export const ROOM_NAME_MAX_LENGTH = 80;
+export const ROOM_NAME_MAX_LENGTH = 100;
 
 /** Obligatorio tras recortar espacios: "   " cuenta como vacío. */
 export function requiredTrimmedValidator(): ValidatorFn {

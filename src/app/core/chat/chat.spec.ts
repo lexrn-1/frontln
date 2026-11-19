@@ -1,3 +1,4 @@
+import { AuthStore } from '../auth/store/auth.store';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
@@ -5,7 +6,7 @@ import { CurrentUser } from '../auth/store/current-user.store';
 import { runtimeConfig } from '../config/runtime-config';
 import { FilesService } from '../files/files.service';
 import { MockFilesService } from '../files/mock-files.service';
-import { REALTIME_EVENTS, RealtimeService, provideRealtime } from '../realtime/realtime.service';
+import { REALTIME_EVENTS, RealtimeService, NotConnectedRealtimeService } from '../realtime/realtime.service';
 import { MockRoomsService } from '../rooms/services/mock-rooms.service';
 import { RoomsService } from '../rooms/services/rooms.service';
 import { MockChatService } from './mocks/mock-chat.service';
@@ -25,8 +26,12 @@ describe('ChatStore: una sola conversación para las dos interfaces', () => {
         { provide: RoomsService, useClass: MockRoomsService },
         { provide: FilesService, useClass: MockFilesService },
         { provide: CurrentUser, useValue: { profile: signal(null) } },
-        ...provideRealtime()
-      ]
+        { provide: RealtimeService, useClass: NotConnectedRealtimeService },
+        {
+          provide: AuthStore,
+          useValue: { registerTeardown: () => () => undefined },
+        },
+      ],
     });
     store = TestBed.inject(ChatStore);
   });
@@ -63,7 +68,9 @@ describe('ChatStore: una sola conversación para las dos interfaces', () => {
     expect(store.conversations()[0].roomId).toBe('SR-8462');
     expect(store.conversations()[0].lastMessage?.text).toBe('Hola desde Meet');
     // otra instancia de lectura por el servicio confirma que se persistió fuera del store
-    TestBed.inject(ChatService).listMessages('SR-8462', { limit: 50 }).subscribe((page) => expect(page.messages.at(-1)?.text).toBe('Hola desde Meet'));
+    TestBed.inject(ChatService)
+      .listMessages('SR-8462', { limit: 50 })
+      .subscribe((page) => expect(page.messages.at(-1)?.text).toBe('Hola desde Meet'));
   });
 
   it('marks messages as read when the conversation is opened', async () => {
@@ -73,15 +80,12 @@ describe('ChatStore: una sola conversación para las dos interfaces', () => {
     expect(store.unreadTotal()).toBe(0);
   });
 
-  it('does not send empty messages and sends files with their text', async () => {
+  it('rejects empty messages and unsupported attachments, preserving text sending', async () => {
     await store.open('SR-5K1M');
     expect(await store.send('SR-5K1M', { text: '   ', files: [] })).toBeFalse();
     const file = new File(['contenido'], 'apuntes.txt', { type: 'text/plain' });
-    expect(await store.send('SR-5K1M', { text: 'Apuntes', files: [file] })).toBeTrue();
-    const sent = store.chatOf('SR-5K1M').messages.at(-1)!;
-    expect(sent.attachments[0].name).toBe('apuntes.txt');
-    const blob = await store.fetchFile(sent.attachments[0]);
-    expect(await blob.text()).toBe('contenido');
+    expect(await store.send('SR-5K1M', { text: 'Apuntes', files: [file] })).toBeFalse();
+    expect(await store.send('SR-5K1M', { text: 'Solo texto', files: [] })).toBeTrue();
   });
 
   it('denies the conversation of a room the user does not belong to', async () => {
@@ -101,20 +105,48 @@ describe('ChatStore: una sola conversación para las dos interfaces', () => {
 });
 
 describe('chat mappers (propuesta de contrato)', () => {
-  const dto = { id: 'm1', roomId: 'R', sender: { uid: 'u1', displayName: 'Ana Ruiz' }, text: 'hola', attachments: [{ id: 'f', fileName: 'a.pdf', size: 5, contentType: 'application/pdf' }], createdAt: '2026-01-01T10:00:00Z' };
+  const dto = {
+    id: 'm1',
+    roomId: 'R',
+    sender: { uid: 'u1', displayName: 'Ana Ruiz' },
+    text: 'hola',
+    attachments: [{ id: 'f', fileName: 'a.pdf', size: 5, contentType: 'application/pdf' }],
+    createdAt: '2026-01-01T10:00:00Z',
+  };
 
   it('maps a message and flags the own ones', () => {
     const m = toMessage(dto, 'u1');
     expect(m.own).toBeTrue();
     expect(m.authorInitial).toBe('A');
-    expect(m.attachments[0]).toEqual({ id: 'f', name: 'a.pdf', size: 5, mimeType: 'application/pdf' });
+    expect(m.attachments[0]).toEqual({
+      id: 'f',
+      name: 'a.pdf',
+      size: 5,
+      mimeType: 'application/pdf',
+    });
     expect(toMessage(dto, 'other').own).toBeFalse();
   });
 
   it('orders pages chronologically and builds conversation previews', () => {
-    const page = toMessagePage({ items: [{ ...dto, id: 'm2', createdAt: '2026-01-01T11:00:00Z' }, dto], nextCursor: 'c' }, null);
+    const page = toMessagePage(
+      {
+        items: [{ ...dto, id: 'm2', createdAt: '2026-01-01T11:00:00Z' }, dto],
+        nextCursor: 'c',
+      },
+      null
+    );
     expect(page.messages.map((m) => m.id)).toEqual(['m1', 'm2']);
-    const conv = toConversation({ roomId: 'R', roomName: 'Sala', participantCount: 3, unreadCount: 2, lastActivityAt: null, lastMessage: dto }, 'u1');
+    const conv = toConversation(
+      {
+        roomId: 'R',
+        roomName: 'Sala',
+        participantCount: 3,
+        unreadCount: 2,
+        lastActivityAt: null,
+        lastMessage: dto,
+      },
+      'u1'
+    );
     expect(conv.lastMessage?.authorName).toBe('Tú');
     expect(conv.lastMessage?.hasAttachments).toBeTrue();
     expect(conv.lastActivityAt).toBe(dto.createdAt);

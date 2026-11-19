@@ -1,6 +1,6 @@
 # FrontMeet (Frontend)
 
-SPA Angular 17 con Tailwind, Material y SCSS. Mantiene `core` / `shared` / `features`, stores con signals y adaptadores HTTP. Ver [arquitectura](docs/ARCHITECTURE.md) y [conexión pública](docs/INTEGRATION.md).
+SPA Angular 17 con Tailwind, Material y SCSS. Mantiene `core` / `shared` / `features`, stores con signals y adaptadores HTTP. Ver [arquitectura](docs/ARCHITECTURE.md), [conexión pública](docs/INTEGRATION.md) e [integración de salas/chat/WebRTC](docs/COLLABORATION.md).
 
 ## Ejecutar y compilar
 
@@ -46,6 +46,10 @@ Se requiere Chrome/Chromium o `CHROME_BIN`. Las pruebas usan Jasmine, Karma y Ht
 
 `vercel.json` mantiene `pnpm run build`, salida `dist/frontmeet/browser` y fallback SPA. Se requiere redeploy para publicar estos cambios; no se ejecutó publicación desde esta entrega. No cambiar las URLs a `/q/health/ready/api/...`: readiness y API de negocio son rutas independientes.
 
-En Dokploy debe dirigirse `/socket.io/` a backend-realtime:9092 y el resto a backend-api:8080. La revisión pública inicial devolvió 404 en Socket.IO; el cambio remoto de enrutamiento sigue pendiente. No hay funcionalidad frontend de salas/chat/WebRTC en esta entrega.
+En Dokploy, `/socket.io/` va a realtime:9092, el historial exacto `/api/v1/rooms/{uuid}/messages` a realtime HTTP:8080 y las demás rutas a API:8080. La extensión de salas/chat/WebRTC está implementada y validada localmente; su publicación coordinada sigue pendiente.
 
 Los adaptadores mock se conservan solo para activación explícita con `useMocks: true` (e identidad simulada con `useFirebaseAuth: false`). No están activos en la configuración publicada por el build actual.
+
+## Salas y chat
+
+Esta entrega conecta creación/edición/eliminación y unión por UUID, presencia de hasta seis conexiones, chat persistente con historial paginado y medios WebRTC/pantalla. Se reutiliza Atomic Design y los stores; el panel muestra salas propias y Chats muestra membresías. No incluye catálogo, horarios, adjuntos o tablero. Es necesario desplegar los nuevos backends y rutas del gateway para utilizarlos desde Vercel. [Contratos, pruebas locales y límites](docs/COLLABORATION.md).

@@ -9,6 +9,7 @@ export function firebaseApp(): FirebaseApp {
 
 /** Activa Google Analytics solo si el navegador lo soporta (no falla con bloqueadores). */
 export async function startAnalytics(): Promise<void> {
+  if (runtimeConfig.authEmulatorUrl) return;
   try {
     const { getAnalytics, isSupported } = await import('firebase/analytics');
     if (await isSupported()) {

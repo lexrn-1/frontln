@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, HostListener, OnInit, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  HostListener,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRouteSnapshot, NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter, startWith } from 'rxjs';
@@ -15,7 +24,10 @@ import { RoomsStore } from '../../core/rooms/store/rooms.store';
 import { StudyStatsStore } from '../../core/study/store/study-stats.store';
 import { ConfirmDialogComponent } from '../../shared/ui/molecules/confirm-dialog/confirm-dialog.component';
 import { ToastComponent } from '../../shared/ui/molecules/toast/toast.component';
-import { CreateRoomDialogComponent, RoomFormValue } from '../../shared/ui/organisms/create-room-dialog/create-room-dialog.component';
+import {
+  CreateRoomDialogComponent,
+  RoomFormValue,
+} from '../../shared/ui/organisms/create-room-dialog/create-room-dialog.component';
 import { JoinRoomDialogComponent } from '../../shared/ui/organisms/join-room-dialog/join-room-dialog.component';
 import { SidebarComponent, SidebarSection } from '../../shared/ui/organisms/sidebar/sidebar.component';
 import { TopbarComponent } from '../../shared/ui/organisms/topbar/topbar.component';
@@ -36,12 +48,24 @@ export interface ShellHeaderData {
 @Component({
   selector: 'app-shell',
   standalone: true,
-  imports: [ConfirmDialogComponent, CreateRoomDialogComponent, JoinRoomDialogComponent, ToastComponent, RouterOutlet, SidebarComponent, TopbarComponent],
+  imports: [
+    ConfirmDialogComponent,
+    CreateRoomDialogComponent,
+    JoinRoomDialogComponent,
+    ToastComponent,
+    RouterOutlet,
+    SidebarComponent,
+    TopbarComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="min-h-screen lg:grid lg:grid-cols-[300px_minmax(0,1fr)]">
       @if (navOpen()) {
-        <div class="fixed inset-0 z-30 bg-ink/30 backdrop-blur-sm lg:hidden" aria-hidden="true" (click)="navOpen.set(false)"></div>
+        <div
+          class="fixed inset-0 z-30 bg-ink/30 backdrop-blur-sm lg:hidden"
+          aria-hidden="true"
+          (click)="navOpen.set(false)"
+        ></div>
       }
       <aside
         class="fixed inset-y-0 left-0 z-40 w-[300px] border-r border-border bg-canvas transition-transform duration-200 lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:translate-x-0"
@@ -60,7 +84,10 @@ export interface ShellHeaderData {
       <div class="min-w-0">
         @if (user.isDemo()) {
           <p class="bg-warning-soft px-4 py-1.5 text-center text-xs font-medium text-warning" role="status">
-            <span class="sm:hidden">Modo demostración · sin backend</span><span class="hidden sm:inline">Acceso de desarrollo activo · datos de demostración, sin conexión con el backend</span>
+            <span class="sm:hidden">Modo demostración · sin backend</span
+            ><span class="hidden sm:inline"
+              >Acceso de desarrollo activo · datos de demostración, sin conexión con el backend</span
+            >
           </p>
         }
         <app-topbar
@@ -80,6 +107,7 @@ export interface ShellHeaderData {
     </div>
 
     <app-create-room-dialog
+      [nameOnly]="true"
       [open]="dialogs.createOpen()"
       [pending]="createPending()"
       [error]="createError()"
@@ -118,7 +146,7 @@ export interface ShellHeaderData {
       (closed)="closeRemove()"
     />
     <app-toast [message]="announcer.message()" [tone]="announcer.tone()" />
-  `
+  `,
 })
 export class AppShellComponent implements OnInit {
   protected readonly user = inject(CurrentUser);
@@ -137,7 +165,10 @@ export class AppShellComponent implements OnInit {
   protected readonly joinError = signal<string | null>(null);
   protected readonly editPending = signal(false);
   protected readonly editError = signal<string | null>(null);
-  protected readonly categories = ROOM_CATEGORIES.map((value) => ({ value, label: ROOM_CATEGORY_LABELS[value] }));
+  protected readonly categories = ROOM_CATEGORIES.map((value) => ({
+    value,
+    label: ROOM_CATEGORY_LABELS[value],
+  }));
   protected readonly removePending = signal(false);
   protected readonly removeError = signal<string | null>(null);
   protected readonly isValidCode = isValidRoomCode;
@@ -156,17 +187,23 @@ export class AppShellComponent implements OnInit {
         title: 'Mi espacio',
         items: [
           { label: 'Inicio', icon: 'home', route: '/dashboard' },
-          { label: 'Explorar salas', icon: 'search', route: '/explorar' },
-          { label: 'Chats', icon: 'forum', route: '/chats', badge: this.chats.unreadTotal() },
+          { label: 'Chats', icon: 'forum', route: '/chats', badge: 0 },
           { label: 'Mi perfil', icon: 'person', route: '/perfil' },
-          { label: 'Configuración', icon: 'settings', route: '/configuracion' }
-        ]
-      }
+          { label: 'Configuración', icon: 'settings', route: '/configuracion' },
+        ],
+      },
     ];
     if (live) {
       sections.push({
         title: 'Estudio',
-        items: [{ label: 'Sala en curso', icon: 'videocam', route: `/salas/${live.id}`, live: true }]
+        items: [
+          {
+            label: 'Sala en curso',
+            icon: 'videocam',
+            route: `/salas/${live.id}`,
+            live: true,
+          },
+        ],
       });
     }
     return sections;
@@ -176,12 +213,18 @@ export class AppShellComponent implements OnInit {
     const days = this.stats.stats()?.streakDays;
     return days ? `Racha de ${days} días` : null;
   });
-  protected readonly streakText = computed(() => (`¡Sigue así, ${this.user.firstName()}!`));
+  protected readonly streakText = computed(() => `¡Sigue así, ${this.user.firstName()}!`);
 
   protected readonly notificationViews = computed(() =>
     this.notifications.items().map((n) => ({
-      id: n.id, title: n.title, detail: n.detail, read: n.read,
-      when: new Date(n.createdAt).toLocaleString('es', { dateStyle: 'medium', timeStyle: 'short' })
+      id: n.id,
+      title: n.title,
+      detail: n.detail,
+      read: n.read,
+      when: new Date(n.createdAt).toLocaleString('es', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      }),
     }))
   );
 
@@ -198,7 +241,7 @@ export class AppShellComponent implements OnInit {
   ngOnInit(): void {
     void this.rooms.loadMine();
     void this.chats.loadConversations();
-    void this.stats.load();
+    if (this.rooms.isDemo) void this.stats.load();
   }
 
   @HostListener('document:keydown.escape')
@@ -266,7 +309,11 @@ export class AppShellComponent implements OnInit {
     this.createPending.set(true);
     this.createError.set(null);
     try {
-      const room = await this.rooms.create({ name: value.name, category: value.category as RoomCategory, schedule: value.schedule });
+      const room = await this.rooms.create({
+        name: value.name,
+        category: value.category as RoomCategory,
+        schedule: value.schedule,
+      });
       this.closeCreate();
       await this.router.navigate(['/salas', room.id]);
     } catch (error) {

@@ -6,6 +6,8 @@
 export type ParticipantTone = 'peach' | 'mint' | 'sky' | 'rose' | 'lavender';
 
 export interface Participant {
+  uid?: string;
+  screenSharing?: boolean;
   id: string;
   /** Nombre corto para la etiqueta de la tarjeta ("Lucía C."). */
   label: string;

@@ -8,7 +8,10 @@ import { MockRoomsService } from './mock-rooms.service';
 /** Resuelve un Observable simulado avanzando el reloj falso. */
 function run<T>(source: Observable<T>): { value?: T; error?: unknown } {
   const result: { value?: T; error?: unknown } = {};
-  source.subscribe({ next: (v) => (result.value = v), error: (e) => (result.error = e) });
+  source.subscribe({
+    next: (v) => (result.value = v),
+    error: (e) => (result.error = e),
+  });
   tick(2000);
   return result;
 }
@@ -23,17 +26,39 @@ describe('MockRoomsService (demo data)', () => {
 
   it('creates a room as host and rejects a repeated name', fakeAsync(() => {
     const api = new MockRoomsService();
-    const room = run(api.create({ name: 'Repaso Física', category: 'ciencias', schedule: null })).value!;
+    const room = run(
+      api.create({
+        name: 'Repaso Física',
+        category: 'ciencias',
+        schedule: null,
+      })
+    ).value!;
     expect(room.isHost).toBeTrue();
     expect(room.id).toMatch(/^SR-[A-Z0-9]{4}$/);
     expect(room.category).toBe('ciencias');
     expect(room.status).toBe('idle');
-    expect((run(api.create({ name: 'repaso física', category: 'ciencias', schedule: null })).error as AppError).code).toBe('room-name-taken');
+    expect(
+      (
+        run(
+          api.create({
+            name: 'repaso física',
+            category: 'ciencias',
+            schedule: null,
+          })
+        ).error as AppError
+      ).code
+    ).toBe('room-name-taken');
   }));
 
   it('creates a scheduled room with its next occurrence', fakeAsync(() => {
     const api = new MockRoomsService();
-    const room = run(api.create({ name: 'Algoritmos', category: 'programacion', schedule: { frequency: 'daily', time: '23:59' } })).value!;
+    const room = run(
+      api.create({
+        name: 'Algoritmos',
+        category: 'programacion',
+        schedule: { frequency: 'daily', time: '23:59' },
+      })
+    ).value!;
     expect(room.status).toBe('scheduled');
     expect(room.startsAt).toBeTruthy();
     expect(room.schedule?.frequency).toBe('daily');
@@ -52,15 +77,4 @@ describe('MockRoomsService (demo data)', () => {
     expect((run(api.remove('SR-3D9F')).error as AppError).status).toBe(403);
     expect(run(api.remove('SR-8462')).error).toBeUndefined();
   }));
-});
-
-describe('HttpRoomsService (contract pending)', () => {
-  it('does not invent a contract: every operation reports contract-pending', (done) => {
-    new HttpRoomsService().listMine().subscribe({
-      error: (e: AppError) => {
-        expect(e.code).toBe('contract-pending');
-        done();
-      }
-    });
-  });
 });

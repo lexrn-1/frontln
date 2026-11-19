@@ -3,15 +3,16 @@ import { Injectable, signal } from '@angular/core';
 export type MediaPermission = 'idle' | 'requesting' | 'granted' | 'denied' | 'unavailable' | 'unsupported';
 
 /**
- * Captura LOCAL de cámara y micrófono con `getUserMedia` (real, no simulada). Esto NO transmite
- * nada a otros participantes: el envío por WebRTC depende de `PeerConnectionsService` (pendiente).
+ * Captura LOCAL de cámara y micrófono con `getUserMedia` (real, no simulada). La transmisión se delega a
+ * PeerConnectionsService; este servicio conserva la responsabilidad de capturar y detener pistas.
  * Las pistas se detienen con `stop()` al salir de la sala.
  */
 @Injectable()
 export class MediaService {
+  private generation = 0;
   readonly stream = signal<MediaStream | null>(null);
   readonly permission = signal<MediaPermission>('idle');
-  /** Pantalla compartida (captura local con `getDisplayMedia`; no se transmite a otros todavía). */
+  /** Pantalla compartida (captura local con `getDisplayMedia`; se delega su envío a PeerConnectionsService). */
   readonly screenStream = signal<MediaStream | null>(null);
   readonly screenMessage = signal<string | null>(null);
 
@@ -22,15 +23,27 @@ export class MediaService {
   async request(want: { audio: boolean; video: boolean }): Promise<boolean> {
     if (!navigator.mediaDevices?.getUserMedia) {
       this.permission.set('unsupported');
-      this.message.set('Tu navegador no permite usar cámara ni micrófono aquí (se requiere HTTPS o un navegador compatible). Puedes seguir en la sala usando el chat.');
+      this.message.set(
+        'Tu navegador no permite usar cámara ni micrófono aquí (se requiere HTTPS o un navegador compatible). Puedes seguir en la sala usando el chat.'
+      );
       return false;
     }
+    const generation = this.generation;
     this.permission.set('requesting');
     this.message.set(null);
     try {
-      this.addStream(await navigator.mediaDevices.getUserMedia(want));
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio:want.audio ? {echoCancellation:true,noiseSuppression:true} : false,
+        video:want.video ? {width:{ideal:640},height:{ideal:360},frameRate:{ideal:15,max:24}} : false
+      });
+      if (generation !== this.generation) {
+        stream.getTracks().forEach((track) => track.stop());
+        return false;
+      }
+      this.addStream(stream);
       return true;
     } catch (error) {
+      if (generation !== this.generation) return false;
       const name = (error as DOMException)?.name;
       if (name === 'NotAllowedError' || name === 'SecurityError') {
         this.permission.set(this.stream() ? 'granted' : 'denied');
@@ -47,7 +60,9 @@ export class MediaService {
         }
       }
       this.permission.set(this.stream() ? 'granted' : 'unavailable');
-      this.message.set('No encontramos una cámara o un micrófono disponible. Revisa que estén conectados y no los use otra aplicación. Puedes seguir usando el chat.');
+      this.message.set(
+        'No encontramos una cámara o un micrófono disponible. Revisa que estén conectados y no los use otra aplicación. Puedes seguir usando el chat.'
+      );
       return false;
     }
   }
@@ -65,13 +80,23 @@ export class MediaService {
 
   /** Pide al usuario elegir una pantalla/ventana. Cancelar el selector deja todo igual. */
   async startScreen(): Promise<boolean> {
+    const generation = this.generation;
     this.screenMessage.set(null);
     if (!navigator.mediaDevices?.getDisplayMedia) {
-      this.screenMessage.set('Tu navegador no permite compartir pantalla. Prueba con un navegador de escritorio actualizado.');
+      this.screenMessage.set(
+        'Tu navegador no permite compartir pantalla. Prueba con un navegador de escritorio actualizado.'
+      );
       return false;
     }
     try {
-      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: false,
+      });
+      if (generation !== this.generation) {
+        stream.getTracks().forEach((track) => track.stop());
+        return false;
+      }
       // Si se detiene desde el navegador ("Dejar de compartir"), se limpia el estado.
       stream.getVideoTracks()[0]?.addEventListener('ended', () => this.stopScreen());
       this.screenStream.set(stream);
@@ -85,22 +110,33 @@ export class MediaService {
   }
 
   stopScreen(): void {
-    this.screenStream()?.getTracks().forEach((t) => t.stop());
+    this.screenStream()
+      ?.getTracks()
+      .forEach((t) => t.stop());
     this.screenStream.set(null);
   }
 
   /** Detiene todas las pistas capturadas. */
   stop(): void {
+    ++this.generation;
     this.stopScreen();
-    this.stream()?.getTracks().forEach((t) => t.stop());
+    this.stream()
+      ?.getTracks()
+      .forEach((t) => t.stop());
     this.stream.set(null);
-    if (this.permission() === 'granted') this.permission.set('idle');
+    if (this.permission() === 'granted' || this.permission() === 'requesting') this.permission.set('idle');
   }
 
   /** Suma las pistas nuevas a la captura existente (pedir el micrófono no enciende la cámara ni al revés). */
   private addStream(next: MediaStream): void {
     const current = this.stream();
-    this.stream.set(current ? new MediaStream([...current.getTracks(), ...next.getTracks()]) : next);
+    const kinds = new Set(next.getTracks().map((t) => t.kind));
+    const kept = current?.getTracks().filter((t) => !kinds.has(t.kind)) ?? [];
+    current
+      ?.getTracks()
+      .filter((t) => kinds.has(t.kind))
+      .forEach((t) => t.stop());
+    this.stream.set(new MediaStream([...kept, ...next.getTracks()]));
     this.permission.set('granted');
   }
 }

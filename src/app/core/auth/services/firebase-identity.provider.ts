@@ -1,7 +1,9 @@
+import { runtimeConfig } from '../../config/runtime-config';
 import { Injectable } from '@angular/core';
 import { FirebaseError } from 'firebase/app';
 import {
   Auth,
+  connectAuthEmulator,
   GoogleAuthProvider,
   User,
   createUserWithEmailAndPassword,
@@ -10,7 +12,7 @@ import {
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
-  updateProfile
+  updateProfile,
 } from 'firebase/auth';
 import { Observable, defer, from, map } from 'rxjs';
 
@@ -24,6 +26,15 @@ import { IdentityProvider } from './identity-provider';
 export class FirebaseIdentityProvider extends IdentityProvider {
   private readonly auth: Auth = getAuth(firebaseApp());
 
+  constructor() {
+    super();
+    if (runtimeConfig.authEmulatorUrl) {
+      if (!['localhost', '127.0.0.1'].includes(location.hostname)) throw new Error('Emulador reservado para localhost');
+      connectAuthEmulator(this.auth, runtimeConfig.authEmulatorUrl, {
+        disableWarnings: true,
+      });
+    }
+  }
   readonly user$: Observable<IdentityUser | null> = new Observable((subscriber) =>
     onAuthStateChanged(
       this.auth,
@@ -85,7 +96,7 @@ function toUser(user: User): IdentityUser {
     email: (user.email ?? '').toLowerCase(),
     displayName: user.displayName,
     photoUrl: user.photoURL,
-    provider: google ? 'google' : 'password'
+    provider: google ? 'google' : 'password',
   };
 }
 

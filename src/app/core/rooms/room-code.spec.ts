@@ -1,17 +1,13 @@
-import { isValidRoomCode, normalizeRoomCode } from './room-code';
-
-describe('room code', () => {
-  it('trims spaces, uppercases and restores the hyphen', () => {
-    expect(normalizeRoomCode('  sr84k2 ')).toBe('SR-84K2');
-    expect(normalizeRoomCode('sr-84k2')).toBe('SR-84K2');
+import { isValidRoomCode, normalizeRoomCode, isPlausibleRoomId } from './room-code';
+describe('Room UUID contract', () => {
+  const id = '40b4c52b-ab39-4f52-a897-322a175eaa97';
+  it('trims ends and accepts uppercase pasted UUIDs', () => {
+    expect(normalizeRoomCode(' ' + id.toUpperCase() + ' ')).toBe(id);
+    expect(isValidRoomCode(' ' + id + ' ')).toBeTrue();
   });
-
-  it('accepts the prototype format and rejects other shapes', () => {
-    expect(isValidRoomCode('SR-84K2')).toBeTrue();
-    expect(isValidRoomCode(' sr 84k2 ')).toBeTrue();
-    expect(isValidRoomCode('')).toBeFalse();
-    expect(isValidRoomCode('84K2')).toBeFalse();
-    expect(isValidRoomCode('SR-84K')).toBeFalse();
-    expect(isValidRoomCode('SR-84K2X')).toBeFalse();
+  it('rejects prototype IDs, inner whitespace and wrong UUID versions', () => {
+    for (const bad of ['', 'SR-84K2', id.replace('ab39', 'ab 39'), id.replace('-4f52', '-1f52')])
+      expect(isValidRoomCode(bad)).toBeFalse();
+    expect(isPlausibleRoomId(id)).toBeTrue();
   });
 });

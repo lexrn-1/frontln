@@ -1,7 +1,12 @@
+import {RoomWire} from '../models/room.dto';
+import {toRoom} from '../models/room.mapper';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
+import { map, of, expand, reduce, EMPTY } from 'rxjs';
+import { runtimeConfig } from '../../config/runtime-config';
 import { Observable } from 'rxjs';
 
 import { apiRoutes } from '../../config/api-routes';
-import { contractPending } from '../../http/contract-pending';
 import { CreateRoomRequest, Room, RoomQuery, UpdateRoomRequest } from '../models/room.models';
 
 /**
@@ -21,47 +26,60 @@ export abstract class RoomsService {
   /** Ingreso con ID/código de invitación (ya recortado y normalizado). */
   abstract join(code: string): Observable<Room>;
   abstract getById(id: string): Observable<Room>;
-  /** Cambia el nombre; solo el anfitrión (403 en otro caso). Contrato PROPUESTO: `PATCH /rooms/{id}`. */
+
   abstract update(id: string, request: UpdateRoomRequest): Observable<Room>;
-  /** Abandonar la sala (participantes no anfitriones). Contrato PROPUESTO: `POST /rooms/{id}/leave`. */
+
   abstract leave(id: string): Observable<void>;
   /** Eliminar solo está permitido al anfitrión (el servidor responde 403 en otro caso). */
   abstract remove(id: string): Observable<void>;
 }
 
-/**
- * Adaptador HTTP. Las rutas vienen del plan de trabajo, pero backend aún no publica método, cuerpo
- * ni respuesta; hasta entonces cada operación devuelve `contract-pending` en vez de inventar un
- * contrato. Falta definir: DTO de sala (materia, categoría, participantes, estado, horario),
- * búsqueda/filtros del catálogo (el plan dice "sin catálogo público"), ID/código de invitación y
- * errores (404 sala inexistente, 403 acción ajena).
- */
+@Injectable()
 export class HttpRoomsService extends RoomsService {
   readonly isDemo = false;
   readonly joinHint = null;
 
+  private readonly http = inject(HttpClient);
+  private readonly base = runtimeConfig.apiUrl;
   listMine(): Observable<Room[]> {
-    return contractPending(`GET ${apiRoutes.rooms} (salas del usuario)`);
+    return this.list('owned');
+  }
+  list(scope: 'owned' | 'member'): Observable<Room[]> {
+    const page = (cursor?: string) =>
+      this.http.get<{ items: RoomWire[]; nextCursor: string | null }>(`${this.base}/rooms`, {
+        params: cursor
+          ? new HttpParams().set('scope', scope).set('limit', 50).set('cursor', cursor)
+          : new HttpParams().set('scope', scope).set('limit', 50),
+      });
+    return page().pipe(
+      expand((p) => (p.nextCursor ? page(p.nextCursor) : EMPTY)),
+      reduce((all, p) => [...all, ...p.items.map(toRoom)], [] as Room[])
+    );
   }
   listAvailable(_query: RoomQuery): Observable<Room[]> {
-    return contractPending(`GET ${apiRoutes.rooms} (catálogo de salas)`);
+    return of([]);
   }
-  create(_request: CreateRoomRequest): Observable<Room> {
-    return contractPending(`POST ${apiRoutes.rooms}`);
+  create(request: CreateRoomRequest): Observable<Room> {
+    return this.http.post<RoomWire>(`${this.base}/rooms`, { name: request.name.trim() }).pipe(map(toRoom));
   }
   join(code: string): Observable<Room> {
-    return contractPending(`POST ${apiRoutes.roomJoin(code)}`);
+    return this.http.post<RoomWire>(`${this.base}${apiRoutes.roomJoin(code)}`, {}).pipe(map(toRoom));
   }
   getById(id: string): Observable<Room> {
-    return contractPending(`GET ${apiRoutes.room(id)}`);
+    return this.http.get<RoomWire>(`${this.base}${apiRoutes.room(id)}`).pipe(map(toRoom));
+  }
+  update(id: string, request: UpdateRoomRequest): Observable<Room> {
+    return this.http
+      .patch<RoomWire>(`${this.base}${apiRoutes.room(id)}`, {
+        name: request.name.trim(),
+      })
+      .pipe(map(toRoom));
   }
   remove(id: string): Observable<void> {
-    return contractPending(`DELETE ${apiRoutes.room(id)}`);
+    return this.http.delete<void>(`${this.base}${apiRoutes.room(id)}`);
   }
-  update(id: string, _request: UpdateRoomRequest): Observable<Room> {
-    return contractPending(`PATCH ${apiRoutes.room(id)}`);
-  }
-  leave(id: string): Observable<void> {
-    return contractPending(`POST ${apiRoutes.roomLeave(id)}`);
+  // Salir cierra la presencia; conserva la membresía y el historial.
+  leave(_id: string): Observable<void> {
+    return of(undefined);
   }
 }

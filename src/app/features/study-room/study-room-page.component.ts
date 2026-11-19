@@ -23,11 +23,6 @@ import { ParticipantGridComponent } from './components/participant-grid.componen
 import { RoomHeaderComponent } from './components/room-header.component';
 import { StudyRoomStore } from './store/study-room.store';
 
-/**
- * Sala de estudio en curso (ruta `/salas/:id`, pantalla completa fuera del shell). El chat integrado
- * usa `ChatStore`, el mismo historial que el apartado `/chats`. Cámara y micrófono son captura
- * local real; la transmisión a otros y el tiempo real están pendientes.
- */
 @Component({
   selector: 'app-study-room-page',
   standalone: true,
@@ -42,12 +37,16 @@ import { StudyRoomStore } from './store/study-room.store';
     ParticipantGridComponent,
     RoomHeaderComponent,
     ScreenShareViewComponent,
-    ToastComponent
+    ToastComponent,
   ],
   providers: [StudyRoomStore],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <main id="contenido" tabindex="-1" class="flex h-dvh flex-col gap-3 overflow-hidden p-3 outline-none sm:gap-4 sm:p-4">
+    <main
+      id="contenido"
+      tabindex="-1"
+      class="flex h-dvh flex-col gap-3 overflow-hidden p-3 outline-none sm:gap-4 sm:p-4"
+    >
       @switch (store.state()) {
         @case ('loading') {
           <div class="grid flex-1 place-items-center" role="status">
@@ -60,7 +59,9 @@ import { StudyRoomStore } from './store/study-room.store';
             <div class="surface-card w-full max-w-md">
               <h1 class="sr-only">Sala de estudio</h1>
               <app-empty-state tone="error" icon="meeting_room" title="No pudimos abrir la sala" [text]="store.error()">
-                @if (validId()) { <button type="button" class="btn-ghost h-10" (click)="reload()">Reintentar</button> }
+                @if (validId()) {
+                  <button type="button" class="btn-ghost h-10" (click)="reload()">Reintentar</button>
+                }
                 <button type="button" class="btn-primary h-10" (click)="leave()">Volver al panel</button>
               </app-empty-state>
             </div>
@@ -78,49 +79,93 @@ import { StudyRoomStore } from './store/study-room.store';
               (leave)="leave()"
               (copyCode)="copyCode()"
             />
-            <app-goal-banner [class]="store.stage() === 'grid' ? '' : 'max-lg:hidden'" [goal]="store.session()?.goal ?? null" />
+            @if (store.session()?.goal) {
+              <app-goal-banner
+                [class]="store.stage() === 'grid' ? '' : 'max-lg:hidden'"
+                [goal]="store.session()?.goal ?? null"
+              />
+            }
 
             @if (store.stage() === 'grid') {
-            <p class="flex items-start gap-2 rounded-xl bg-warning-soft px-3 py-1.5 text-[11px] font-medium text-warning sm:px-3.5 sm:py-2 sm:text-xs" role="note">
-              <app-icon name="info" [size]="16" class="mt-px" />
-              <span class="sm:hidden">Demostración: aún no hay audio ni vídeo entre participantes.</span>
-              <span class="hidden sm:inline">
-                @if (store.isDemo) { Vista de demostración: participantes y mensajes son de ejemplo. }
-                La transmisión de audio y vídeo a los demás y la sincronización en tiempo real están pendientes de integración: tu cámara y micrófono solo se ven en tu pantalla.
-              </span>
-            </p>
-            <app-media-permission-alert [permission]="store.permission()" [message]="store.permissionMessage()" (activate)="store.activateMedia()" />
+              @if (store.realtimeStatus() !== 'connected') {
+                <p role="status" class="rounded-xl bg-warning-soft px-3 py-2 text-xs">
+                  Reconectando a la sala… El historial se recuperará al conectar.
+                </p>
+              }
+              @if (store.mediaConnected() === 'unavailable') {
+                <p role="status" class="rounded-xl bg-warning-soft px-3 py-2 text-xs">
+                  No se pudo establecer audio/vídeo con algún participante. Puedes continuar usando el chat y reingresar
+                  para reintentar.
+                </p>
+              }
+              <app-media-permission-alert
+                [permission]="store.permission()"
+                [message]="store.permissionMessage()"
+                (activate)="store.activateMedia()"
+              />
             }
 
             <div class="flex min-h-0 flex-1 flex-col gap-3 lg:flex-row">
               @if (store.stage() !== 'grid') {
                 <!-- Móvil: personas en una tira horizontal sobre el escenario -->
-                <app-participant-grid class="shrink-0 lg:hidden" [compact]="true" [maxVisible]="6" [participants]="store.participants()" [localStream]="store.localStream()" />
+                <app-participant-grid
+                  class="shrink-0 lg:hidden"
+                  [compact]="true"
+                  [maxVisible]="6"
+                  [participants]="store.participants()"
+                  [localStream]="store.screenStream() ?? store.localStream()"
+                  [remoteStreams]="store.remoteStreams()"
+                />
               }
               @switch (store.stage()) {
                 @case ('board') {
-                  <div class="min-h-0 min-w-0 flex-1"><app-board-dialog [roomId]="room.id" (closed)="store.toggleBoard()" /></div>
+                  <div class="min-h-0 min-w-0 flex-1">
+                    <app-board-dialog [roomId]="room.id" (closed)="store.toggleBoard()" />
+                  </div>
                 }
                 @case ('screen') {
-                  <div class="min-h-0 min-w-0 flex-1"><app-screen-share-view [stream]="store.screenStream()" (stop)="store.stopScreen()" /></div>
+                  <div class="min-h-0 min-w-0 flex-1">
+                    <app-screen-share-view [stream]="store.screenStream()" (stop)="store.stopScreen()" />
+                  </div>
                 }
                 @default {
                   <div class="min-h-0 min-w-0 flex-1 overflow-y-auto lg:overflow-visible">
-                    <app-participant-grid [participants]="store.participants()" [localStream]="store.localStream()" />
+                    <app-participant-grid
+                      [participants]="store.participants()"
+                      [localStream]="store.screenStream() ?? store.localStream()"
+                      [remoteStreams]="store.remoteStreams()"
+                    />
                   </div>
                 }
               }
               @if (store.stage() !== 'grid' || store.chatOpen()) {
                 @if (store.chatOpen()) {
-                  <div class="fixed inset-0 z-30 bg-ink/30 backdrop-blur-sm lg:hidden" aria-hidden="true" (click)="store.toggleChat()"></div>
+                  <div
+                    class="fixed inset-0 z-30 bg-ink/30 backdrop-blur-sm lg:hidden"
+                    aria-hidden="true"
+                    (click)="store.toggleChat()"
+                  ></div>
                 }
                 <aside
                   class="min-h-0 flex-col gap-3 lg:w-[380px] lg:shrink-0"
-                  [class]="store.chatOpen() ? 'max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:top-24 max-lg:z-40 max-lg:flex max-lg:rounded-t-3xl max-lg:bg-canvas max-lg:p-2 max-lg:shadow-modal lg:flex' : 'hidden lg:flex'"
+                  [class]="
+                    store.chatOpen()
+                      ? 'max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:top-24 max-lg:z-40 max-lg:flex max-lg:rounded-t-3xl max-lg:bg-canvas max-lg:p-2 max-lg:shadow-modal lg:flex'
+                      : 'hidden lg:flex'
+                  "
                   aria-label="Participantes y chat"
                 >
                   @if (store.stage() !== 'grid') {
-                    <app-participant-grid class="hidden lg:block" [class]="store.chatOpen() ? 'shrink-0' : 'min-h-0 flex-1'" [compact]="true" [fill]="!store.chatOpen()" [maxVisible]="4" [participants]="store.participants()" [localStream]="store.localStream()" />
+                    <app-participant-grid
+                      class="hidden lg:block"
+                      [class]="store.chatOpen() ? 'shrink-0' : 'min-h-0 flex-1'"
+                      [compact]="true"
+                      [fill]="!store.chatOpen()"
+                      [maxVisible]="4"
+                      [participants]="store.participants()"
+                      [localStream]="store.screenStream() ?? store.localStream()"
+                      [remoteStreams]="store.remoteStreams()"
+                    />
                   }
                   @if (store.chatOpen()) {
                     <div class="min-h-0 flex-1">
@@ -167,7 +212,7 @@ import { StudyRoomStore } from './store/study-room.store';
       }
     </main>
     <app-toast [message]="announcer.message()" [tone]="announcer.tone()" />
-  `
+  `,
 })
 export class StudyRoomPageComponent implements OnInit, OnDestroy {
   protected readonly store = inject(StudyRoomStore);
@@ -195,7 +240,7 @@ export class StudyRoomPageComponent implements OnInit, OnDestroy {
     const elapsed = this.store.elapsed();
     if (elapsed) return `En curso · ${elapsed}`;
     if (room?.startsAt) return scheduleLabel(room.startsAt);
-    return 'Sin sesión en curso';
+    return 'Sala de estudio';
   });
 
   ngOnInit(): void {

@@ -234,3 +234,7 @@ Los DTO wire describen las respuestas directas de Quarkus y permanecen separados
 El interceptor usa origen y prefijo REST exactos para Bearer. El contexto de logout desactiva recuperación de 401; la limpieza local no depende del éxito de la invalidación remota. La landing consulta readiness y demo como capacidades independientes, sin cifras simuladas en el modo real.
 
 La configuración pública activa se documenta en [INTEGRATION.md](INTEGRATION.md).
+
+## Colaboración integrada
+
+Salas, chat, presencia y WebRTC usan adaptadores en core/features y stores. MediaStreamComponent es una molécula reutilizable; organismos siguen siendo presentacionales. El frontend nunca lee Firestore directamente; ver [contratos vigentes](COLLABORATION.md).

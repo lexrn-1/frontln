@@ -56,7 +56,11 @@ export class DashboardStore {
   readonly nextSession = computed<NextSession | null>(() => {
     const room = this.upcoming()[0];
     return room
-      ? { room, countdown: countdownLabel(room.startsAt!, this.now()), companions: Math.max(0, room.participantCount - 1) }
+      ? {
+          room,
+          countdown: countdownLabel(room.startsAt!, this.now()),
+          companions: Math.max(0, room.participantCount - 1),
+        }
       : null;
   });
 
@@ -67,9 +71,12 @@ export class DashboardStore {
         const [day, time] = scheduleLabel(r.startsAt!, this.now()).split(', ');
         const [title, ...rest] = r.name.split(' · ');
         return {
-          id: r.id, time, day, title,
+          id: r.id,
+          time,
+          day,
+          title,
           subtitle: rest.join(' · ') || r.subject,
-          others: Math.max(0, r.participantCount - 1)
+          others: Math.max(0, r.participantCount - 1),
         };
       })
   );
@@ -81,6 +88,6 @@ export class DashboardStore {
 
   reload(): void {
     void this.roomsStore.loadMine();
-    void this.statsStore.load(true);
+    if (this.isDemo) void this.statsStore.load(true);
   }
 }

@@ -1,6 +1,5 @@
-/**
- * DTO "wire" PROPUESTOS del chat y los archivos. PENDIENTE DE IMPLEMENTACIÓN EN BACKEND: no hay
- * contrato publicado; si backend usa otros nombres basta adaptar este archivo y `chat.mapper.ts`.
+/** DTO del chat de backend-realtime. Adjuntos y vistas de conversación se conservan
+ * como tipos visuales de muestras, sin endpoints de producto para adjuntos/no leídos.
  */
 export interface AttachmentDto {
   id: string;
@@ -15,7 +14,8 @@ export interface MessageDto {
   clientMessageId?: string;
   sender: { uid: string; displayName: string; avatar?: string };
   text: string;
-  attachments: AttachmentDto[];
+  attachments?: AttachmentDto[];
+  cursor?: string;
   /** ISO 8601 UTC. */
   createdAt: string;
 }

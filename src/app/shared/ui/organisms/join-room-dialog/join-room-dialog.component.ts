@@ -16,10 +16,23 @@ import { ModalDialogComponent } from '../../molecules/modal-dialog/modal-dialog.
 @Component({
   selector: 'app-join-room-dialog',
   standalone: true,
-  imports: [FormFieldComponent, IconComponent, ModalDialogComponent, ReactiveFormsModule, SpinnerComponent, TextInputComponent],
+  imports: [
+    FormFieldComponent,
+    IconComponent,
+    ModalDialogComponent,
+    ReactiveFormsModule,
+    SpinnerComponent,
+    TextInputComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-modal-dialog [open]="open()" heading="Unirse a una sala" eyebrow="StudyRoom" [busy]="pending()" (closed)="closed.emit()">
+    <app-modal-dialog
+      [open]="open()"
+      heading="Unirse a una sala"
+      eyebrow="StudyRoom"
+      [busy]="pending()"
+      (closed)="closed.emit()"
+    >
       <p class="mt-2 text-[13px] text-muted">Pega el código de invitación que te envió el anfitrión.</p>
       <form [formGroup]="form" (ngSubmit)="submit()" novalidate class="mt-5">
         <app-form-field label="Código de invitación" forId="join-room-code" [error]="fieldError()" [hint]="hint()">
@@ -27,7 +40,7 @@ import { ModalDialogComponent } from '../../molecules/modal-dialog/modal-dialog.
             inputId="join-room-code"
             formControlName="code"
             icon="link"
-            placeholder="Ej. SR-84K2"
+            placeholder="UUID de la sala"
             autocomplete="off"
             [required]="true"
             [invalid]="!!fieldError()"
@@ -46,7 +59,7 @@ import { ModalDialogComponent } from '../../molecules/modal-dialog/modal-dialog.
         </div>
       </form>
     </app-modal-dialog>
-  `
+  `,
 })
 export class JoinRoomDialogComponent {
   readonly open = input(false);
@@ -59,13 +72,18 @@ export class JoinRoomDialogComponent {
   readonly submitted = output<string>();
   readonly closed = output<void>();
 
-  protected readonly form = inject(FormBuilder).nonNullable.group({ code: [''] });
+  protected readonly form = inject(FormBuilder).nonNullable.group({
+    code: [''],
+  });
   private submittedOnce = false;
 
   protected readonly fieldError = () =>
     controlError(
       this.form.controls.code,
-      { required: 'Escribe el código de invitación.', codeFormat: 'El código no tiene un formato válido. Ejemplo: SR-84K2.' },
+      {
+        required: 'Escribe el código de invitación.',
+        codeFormat: 'Pega el UUID completo de la sala, sin espacios internos.',
+      },
       this.submittedOnce
     ) ?? this.error();
 

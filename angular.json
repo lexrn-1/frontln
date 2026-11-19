@@ -14,16 +14,10 @@
             "outputPath": "dist/frontmeet",
             "index": "src/index.html",
             "browser": "src/main.ts",
-            "polyfills": [
-              "zone.js"
-            ],
+            "polyfills": ["zone.js"],
             "tsConfig": "tsconfig.app.json",
-            "styles": [
-              "src/styles.scss"
-            ],
-            "assets": [
-              "src/assets"
-            ]
+            "styles": ["src/styles.scss"],
+            "assets": ["src/assets"]
           },
           "configurations": {
             "production": {
@@ -33,6 +27,16 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "integration": {
+              "optimization": false,
+              "sourceMap": true,
+              "fileReplacements": [
+                {
+                  "replace": "src/app/core/config/runtime-config.ts",
+                  "with": "src/app/core/config/runtime-config.integration.ts"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
@@ -48,6 +52,10 @@
             },
             "development": {
               "buildTarget": "frontmeet:build:development"
+            },
+            "integration": {
+              "buildTarget": "frontmeet:build:integration",
+              "proxyConfig": "proxy.integration.json"
             }
           },
           "defaultConfiguration": "development"
@@ -55,15 +63,10 @@
         "test": {
           "builder": "@angular-devkit/build-angular:karma",
           "options": {
-            "polyfills": [
-              "zone.js",
-              "zone.js/testing"
-            ],
+            "polyfills": ["zone.js", "zone.js/testing"],
             "tsConfig": "tsconfig.spec.json",
             "browsers": "ChromeHeadless",
-            "assets": [
-              "src/assets"
-            ]
+            "assets": ["src/assets"]
           }
         }
       }

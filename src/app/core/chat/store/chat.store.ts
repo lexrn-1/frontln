@@ -1,4 +1,5 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { AuthStore } from '../../auth/store/auth.store';
+import { Injectable, DestroyRef, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
 import { CurrentUser } from '../../auth/store/current-user.store';
@@ -8,7 +9,7 @@ import { AppError } from '../../http/app-error';
 import { RealtimeService, REALTIME_EVENTS } from '../../realtime/realtime.service';
 import { LoadState } from '../../rooms/store/rooms.store';
 import { toMessage } from '../models/chat.mapper';
-import { ChatMessage, Conversation, FileAttachment, OutgoingMessage } from '../models/chat.models';
+import { ChatMessage, Conversation, MessagePage, FileAttachment, OutgoingMessage } from '../models/chat.models';
 import { ChatService } from '../services/chat.service';
 
 /** Estado de la conversación de UNA sala. */
@@ -24,7 +25,13 @@ export interface RoomChat {
 }
 
 const EMPTY: RoomChat = {
-  messages: [], state: 'idle', error: null, nextCursor: null, loadingOlder: false, sending: false, sendError: null
+  messages: [],
+  state: 'idle',
+  error: null,
+  nextCursor: null,
+  loadingOlder: false,
+  sending: false,
+  sendError: null,
 };
 
 /**
@@ -46,16 +53,41 @@ export class ChatStore {
   readonly unreadTotal = computed(() => this.conversations().reduce((sum, c) => sum + c.unreadCount, 0));
 
   private readonly rooms = signal<Record<string, RoomChat>>({});
+  private epoch = 0;
   private activeRoom: string | null = null;
   private readonly retryIds = new Map<string, { key: string; id: string }>();
 
   constructor() {
+    inject(AuthStore).registerTeardown(() => {
+      ++this.epoch;
+      this.activeRoom = null;
+      this.rooms.set({});
+      this.conversations.set([]);
+      this.conversationsState.set('idle');
+      this.retryIds.clear();
+    });
     // Sin servidor real este flujo no emite nada; queda listo para el adaptador de Socket.IO.
-    this.realtime.events$.subscribe((event) => {
+    const subscription = this.realtime.events$.subscribe((event) => {
       if (event.type === REALTIME_EVENTS.messageCreated) {
         const message = toMessage(event.message, this.user.profile()?.uid ?? null);
         this.receive(event.roomId, message);
+      } else if (event.type === REALTIME_EVENTS.snapshot && this.activeRoom === event.roomId) {
+        void this.recover(event.roomId);
+      } else if (event.type === REALTIME_EVENTS.roomDeleted) {
+        this.patch(event.roomId, {
+          state: 'error',
+          error: 'La sala fue eliminada',
+        });
+        this.conversations.update((list) => list.filter((c) => c.roomId !== event.roomId));
       }
+    });
+    const focus = () => {
+      if (this.activeRoom) void this.recover(this.activeRoom);
+    };
+    window.addEventListener('focus', focus);
+    inject(DestroyRef).onDestroy(() => {
+      subscription.unsubscribe();
+      window.removeEventListener('focus', focus);
     });
   }
 
@@ -75,12 +107,16 @@ export class ChatStore {
   }
 
   async loadConversations(): Promise<void> {
+    const epoch = this.epoch;
     this.conversationsState.set('loading');
     this.conversationsError.set(null);
     try {
-      this.conversations.set(await firstValueFrom(this.api.listConversations()));
+      const result = await firstValueFrom(this.api.listConversations());
+      if (epoch !== this.epoch) return;
+      this.conversations.set(result);
       this.conversationsState.set('ready');
     } catch (error) {
+      if (epoch !== this.epoch) return;
       this.conversationsError.set(AppError.from(error).message);
       this.conversationsState.set('error');
     }
@@ -88,46 +124,84 @@ export class ChatStore {
 
   /** Marca la sala como activa, carga los últimos mensajes si hace falta y los marca como leídos. */
   async open(roomId: string): Promise<void> {
+    const epoch = this.epoch;
     this.activeRoom = roomId;
+    try {
+      if (!this.isDemo) await this.realtime.enter(roomId);
+    } catch (error) {
+      if (epoch !== this.epoch) return;
+      this.patch(roomId, {
+        state: 'error',
+        error: AppError.from(error).message,
+      });
+      return;
+    }
+    if (epoch !== this.epoch) return;
     const current = this.rooms()[roomId];
     if (!current || current.state === 'idle' || current.state === 'error') {
       this.patch(roomId, { state: 'loading', error: null });
       try {
+        if (!this.isDemo) await this.realtime.enter(roomId);
         const page = await firstValueFrom(this.api.listMessages(roomId, { limit: runtimeConfig.chat.pageSize }));
-        this.patch(roomId, { messages: page.messages, nextCursor: page.nextCursor, state: 'ready' });
+        if (epoch !== this.epoch) return;
+        this.patch(roomId, {
+          messages: this.merge(this.rooms()[roomId]?.messages ?? [], page.messages),
+          nextCursor: page.nextCursor,
+          state: 'ready',
+        });
       } catch (error) {
-        this.patch(roomId, { state: 'error', error: AppError.from(error).message });
+        if (epoch !== this.epoch) return;
+        this.patch(roomId, {
+          state: 'error',
+          error: AppError.from(error).message,
+        });
         return;
       }
     }
+    if (!this.isDemo) await this.recover(roomId);
     await this.markRead(roomId);
   }
 
   close(roomId: string): void {
-    if (this.activeRoom === roomId) this.activeRoom = null;
+    if (this.activeRoom === roomId) {
+      this.activeRoom = null;
+      this.realtime.leaveRoom(roomId);
+    }
   }
 
   async loadOlder(roomId: string): Promise<void> {
+    const epoch = this.epoch;
     const chat = this.rooms()[roomId];
     if (!chat?.nextCursor || chat.loadingOlder) return;
     this.patch(roomId, { loadingOlder: true });
     try {
-      const page = await firstValueFrom(this.api.listMessages(roomId, { before: chat.nextCursor, limit: runtimeConfig.chat.pageSize }));
+      const page = await firstValueFrom(
+        this.api.listMessages(roomId, {
+          before: chat.nextCursor,
+          limit: runtimeConfig.chat.pageSize,
+        })
+      );
+      if (epoch !== this.epoch) return;
       const known = new Set(chat.messages.map((m) => m.id));
       this.patch(roomId, {
-        messages: [...page.messages.filter((m) => !known.has(m.id)), ...chat.messages],
+        messages: this.merge(page.messages, this.rooms()[roomId]?.messages ?? []),
         nextCursor: page.nextCursor,
-        loadingOlder: false
+        loadingOlder: false,
       });
     } catch (error) {
-      this.patch(roomId, { loadingOlder: false, sendError: AppError.from(error).message });
+      if (epoch !== this.epoch) return;
+      this.patch(roomId, {
+        loadingOlder: false,
+        sendError: AppError.from(error).message,
+      });
     }
   }
 
   /** Sube los archivos y envía el mensaje. Devuelve `true` si se envió; si falla conserva el borrador. */
   async send(roomId: string, outgoing: OutgoingMessage): Promise<boolean> {
+    const epoch = this.epoch;
     const text = outgoing.text.trim();
-    if ((!text && outgoing.files.length === 0) || this.rooms()[roomId]?.sending) return false;
+    if (!text || text.length > 2000 || outgoing.files.length > 0 || this.rooms()[roomId]?.sending) return false;
     this.patch(roomId, { sending: true, sendError: null });
     const key = `${text}|${outgoing.files.map((f) => `${f.name}:${f.size}`).join(',')}`;
     const retry = this.retryIds.get(roomId);
@@ -137,12 +211,17 @@ export class ChatStore {
       const attachmentIds: string[] = [];
       for (const file of outgoing.files) attachmentIds.push((await firstValueFrom(this.files.upload(file))).id);
       const message = await firstValueFrom(this.api.sendMessage(roomId, { text, attachmentIds, clientMessageId }));
+      if (epoch !== this.epoch) return false;
       this.retryIds.delete(roomId);
       this.receive(roomId, message, true);
       this.patch(roomId, { sending: false });
       return true;
     } catch (error) {
-      this.patch(roomId, { sending: false, sendError: AppError.from(error).message });
+      if (epoch !== this.epoch) return false;
+      this.patch(roomId, {
+        sending: false,
+        sendError: AppError.from(error).message,
+      });
       return false;
     }
   }
@@ -165,7 +244,8 @@ export class ChatStore {
   /** Integra un mensaje (enviado o recibido) en la conversación y en la lista. */
   private receive(roomId: string, message: ChatMessage, mine = false): void {
     const chat = this.rooms()[roomId];
-    if (chat && !chat.messages.some((m) => m.id === message.id)) this.patch(roomId, { messages: [...chat.messages, message] });
+    if (chat && !chat.messages.some((m) => m.id === message.id))
+      this.patch(roomId, { messages: this.merge(chat.messages, [message]) });
     const isActive = this.activeRoom === roomId;
     const found = this.conversations().some((c) => c.roomId === roomId);
     if (!found) {
@@ -174,11 +254,53 @@ export class ChatStore {
     }
     this.updateConversation(roomId, (c) => ({
       ...c,
-      lastMessage: { text: message.text, authorName: message.own ? 'Tú' : message.authorName, sentAt: message.sentAt, hasAttachments: message.attachments.length > 0 },
+      lastMessage: {
+        text: message.text,
+        authorName: message.own ? 'Tú' : message.authorName,
+        sentAt: message.sentAt,
+        hasAttachments: message.attachments.length > 0,
+      },
       lastActivityAt: message.sentAt,
-      unreadCount: mine || isActive ? 0 : c.unreadCount + 1
+      unreadCount: 0,
     }));
     if (!mine && isActive) void this.api.markRead(roomId).subscribe({ error: () => undefined });
+  }
+
+  private readonly recovering = new Set<string>();
+  private merge(a: ChatMessage[], b: ChatMessage[]): ChatMessage[] {
+    return [...new Map([...a, ...b].map((m) => [m.id, m])).values()].sort(
+      (x, y) => x.sentAt.localeCompare(y.sentAt) || x.id.localeCompare(y.id)
+    );
+  }
+  private async recover(roomId: string): Promise<void> {
+    if (this.isDemo || this.recovering.has(roomId) || this.chatOf(roomId).state !== 'ready') return;
+    this.recovering.add(roomId);
+    const epoch = this.epoch;
+    try {
+      let after = this.chatOf(roomId).messages.slice(-1)[0]?.cursor;
+      if (!after) {
+        const page = await firstValueFrom(this.api.listMessages(roomId, { limit: runtimeConfig.chat.pageSize }));
+        if (epoch !== this.epoch) return;
+        this.patch(roomId, {
+          messages: this.merge(this.chatOf(roomId).messages, page.messages),
+          nextCursor: page.nextCursor,
+        });
+      } else {
+        do {
+          const page: MessagePage = await firstValueFrom(this.api.listMessages(roomId, { limit: 100, after }));
+          if (epoch !== this.epoch) return;
+          this.patch(roomId, {
+            messages: this.merge(this.chatOf(roomId).messages, page.messages),
+          });
+          after = page.nextCursor ?? undefined;
+        } while (after && this.activeRoom === roomId);
+      }
+    } catch (error) {
+      if (epoch !== this.epoch) return;
+      this.patch(roomId, { sendError: AppError.from(error).message });
+    } finally {
+      this.recovering.delete(roomId);
+    }
   }
 
   private updateConversation(roomId: string, fn: (c: Conversation) => Conversation): void {
@@ -190,6 +312,9 @@ export class ChatStore {
   }
 
   private patch(roomId: string, partial: Partial<RoomChat>): void {
-    this.rooms.update((all) => ({ ...all, [roomId]: { ...(all[roomId] ?? EMPTY), ...partial } }));
+    this.rooms.update((all) => ({
+      ...all,
+      [roomId]: { ...(all[roomId] ?? EMPTY), ...partial },
+    }));
   }
 }

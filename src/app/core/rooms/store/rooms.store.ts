@@ -1,3 +1,4 @@
+import { AuthStore } from '../../auth/store/auth.store';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
@@ -23,13 +24,26 @@ export class RoomsStore {
   /** Sesión en curso del usuario, si la hay (activa el acceso "Sala en curso"). */
   readonly liveRoom = computed(() => this._mine().find((r) => r.status === 'live') ?? null);
 
+  private epoch = 0;
+  constructor() {
+    inject(AuthStore).registerTeardown(() => {
+      ++this.epoch;
+      this._mine.set([]);
+      this.state.set('idle');
+    });
+  }
+
   async loadMine(): Promise<void> {
+    const epoch = this.epoch;
     this.state.set('loading');
     this.error.set(null);
     try {
-      this._mine.set(await firstValueFrom(this.api.listMine()));
+      const rooms = await firstValueFrom(this.api.listMine());
+      if (epoch !== this.epoch) return;
+      this._mine.set(rooms);
       this.state.set('ready');
     } catch (error) {
+      if (epoch !== this.epoch) return;
       this.error.set(AppError.from(error).message);
       this.state.set('error');
     }
@@ -38,14 +52,14 @@ export class RoomsStore {
   /** Lanza `AppError` si falla, para que el modal muestre el error junto al campo. */
   async create(request: CreateRoomRequest): Promise<Room> {
     const room = await this.run(() => firstValueFrom(this.api.create(request)));
-    this.upsert(room);
+    if (room.isHost || this.isDemo) this.upsert(room);
     this.revision.update((n) => n + 1);
     return room;
   }
 
   async join(code: string): Promise<Room> {
     const room = await this.run(() => firstValueFrom(this.api.join(code)));
-    this.upsert(room);
+    if (room.isHost || this.isDemo) this.upsert(room);
     this.revision.update((n) => n + 1);
     return room;
   }
@@ -74,8 +88,11 @@ export class RoomsStore {
   }
 
   private async run<T>(op: () => Promise<T>): Promise<T> {
+    const epoch = this.epoch;
     try {
-      return await op();
+      const result = await op();
+      if (epoch !== this.epoch) throw new AppError('unauthorized', 'La sesión cambió');
+      return result;
     } catch (error) {
       throw AppError.from(error);
     }

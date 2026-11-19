@@ -1,6 +1,8 @@
+import { Injectable, inject } from '@angular/core';
+import { of, from, map } from 'rxjs';
+import { RealtimeService, LiveParticipant } from '../../../core/realtime/realtime.service';
 import { Observable } from 'rxjs';
 
-import { contractPending } from '../../../core/http/contract-pending';
 import { Participant, StudySession } from '../models/study-room.models';
 
 /**
@@ -15,17 +17,37 @@ export abstract class StudyRoomService {
   abstract getParticipants(roomId: string): Observable<Participant[]>;
 }
 
-/**
- * Adaptador real, todavía sin contrato: no hay conexión Socket.IO (la ruta pública responde 404,
- * ver EVIDENCE-public-api.md) ni DTO de historial/sesión. Cada operación devuelve `contract-pending`.
- */
-export class PendingStudyRoomService extends StudyRoomService {
+@Injectable()
+export class RealtimeStudyRoomService extends StudyRoomService {
   readonly isDemo = false;
+  private readonly realtime = inject(RealtimeService);
 
   getSession(roomId: string): Observable<StudySession> {
-    return contractPending(`Sesión de estudio de ${roomId} (objetivo y progreso: sin endpoint en el plan)`);
+    return of({ roomId, goal: null, startedAt: null });
   }
   getParticipants(roomId: string): Observable<Participant[]> {
-    return contractPending(`Realtime room:snapshot de ${roomId}`);
+    return from(this.realtime.enter(roomId)).pipe(
+      map((snapshot) => snapshot.participants.map((p) => participantView(p, snapshot.connectionId)))
+    );
   }
+}
+
+export function participantView(p: LiveParticipant, self: string): Participant {
+  return {
+    id: p.connectionId,
+    uid: p.uid,
+    label: p.connectionId === self ? 'Tú' : p.displayName,
+    fullName: p.displayName,
+    initials: p.displayName
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((s) => s[0] ?? '')
+      .join('')
+      .toUpperCase(),
+    tone: 'lavender',
+    isSelf: p.connectionId === self,
+    micOn: p.micOn,
+    camOn: p.camOn,
+    screenSharing: p.screenSharing,
+  };
 }
