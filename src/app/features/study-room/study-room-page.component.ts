@@ -86,6 +86,9 @@ import { StudyRoomStore } from './store/study-room.store';
               />
             }
 
+            @if (store.mediaStateError()) {
+              <p role="status" class="rounded-xl bg-warning-soft px-3 py-2 text-xs">{{ store.mediaStateError() }}</p>
+            }
             @if (store.stage() === 'grid') {
               @if (store.realtimeStatus() !== 'connected') {
                 <p role="status" class="rounded-xl bg-warning-soft px-3 py-2 text-xs">
@@ -173,6 +176,8 @@ import { StudyRoomStore } from './store/study-room.store';
                         [messages]="chat().messages"
                         [state]="chat().state"
                         [error]="chat().error"
+                        [historyError]="chat().historyError"
+                        [canSend]="chatStore.canSend(room.id)"
                         [hasMore]="!!chat().nextCursor"
                         [loadingOlder]="chat().loadingOlder"
                         [participantCount]="store.participants().length"

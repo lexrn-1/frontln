@@ -1,3 +1,4 @@
+import { AppError } from '../http/app-error';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Subject, of } from 'rxjs';
@@ -45,6 +46,8 @@ describe('Chat recovery and session boundaries', () => {
           provide: RealtimeService,
           useValue: {
             events$: events,
+            status: signal('connected'),
+            snapshot: signal({ roomId: 'room', connectionId: 'self' }),
             enter: () => Promise.resolve({}),
             leaveRoom: () => undefined,
           },
@@ -92,5 +95,18 @@ describe('Chat recovery and session boundaries', () => {
     await opening;
     expect(store.chatOf('room').messages).toEqual([]);
     expect(store.chatOf('room').state).toBe('idle');
+  });
+  it('keeps live sending available after a history failure', async () => {
+    api.sendMessage = () => of(toMessage(dto('live', '03'), 'u'));
+    const opening = store.open('room');
+    await Promise.resolve();
+    await Promise.resolve();
+    initial.error(new AppError('dependency-unavailable', 'Historial no disponible', 503));
+    await opening;
+    expect(store.chatOf('room').state).toBe('ready');
+    expect(store.chatOf('room').historyError).toBeTruthy();
+    expect(store.canSend('room')).toBeTrue();
+    expect(await store.send('room', { text: 'live', files: [] })).toBeTrue();
+    expect(store.chatOf('room').messages[0].text).toBe('live');
   });
 });

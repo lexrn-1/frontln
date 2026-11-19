@@ -5,6 +5,7 @@ import { isDevAccessActive } from '../../core/dev/dev-access';
 import { BoardService, HttpBoardService } from './board/services/board.service';
 import { MockBoardService } from './board/services/mock-board.service';
 import { MockStudyRoomService } from './mocks/mock-study-room.service';
+import { RoomMediaStateService } from './services/room-media-state.service';
 import { MediaService } from './services/media.service';
 import {
   NotConnectedPeerConnectionsService,
@@ -29,6 +30,7 @@ export function provideStudyRoom(): Provider[] {
       provide: PeerConnectionsService,
       useClass: useMock ? NotConnectedPeerConnectionsService : WebRtcPeerConnectionsService,
     },
+    RoomMediaStateService,
     MediaService,
   ];
 }

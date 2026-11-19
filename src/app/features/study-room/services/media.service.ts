@@ -11,6 +11,8 @@ export type MediaPermission = 'idle' | 'requesting' | 'granted' | 'denied' | 'un
 export class MediaService {
   private generation = 0;
   readonly stream = signal<MediaStream | null>(null);
+  readonly audioEnabled = signal(false);
+  readonly videoEnabled = signal(false);
   readonly permission = signal<MediaPermission>('idle');
   /** Pantalla compartida (captura local con `getDisplayMedia`; se delega su envío a PeerConnectionsService). */
   readonly screenStream = signal<MediaStream | null>(null);
@@ -33,8 +35,10 @@ export class MediaService {
     this.message.set(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio:want.audio ? {echoCancellation:true,noiseSuppression:true} : false,
-        video:want.video ? {width:{ideal:640},height:{ideal:360},frameRate:{ideal:15,max:24}} : false
+        audio: want.audio ? { echoCancellation: true, noiseSuppression: true } : false,
+        video: want.video
+          ? { width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 15, max: 24 } }
+          : false,
       });
       if (generation !== this.generation) {
         stream.getTracks().forEach((track) => track.stop());
@@ -71,11 +75,12 @@ export class MediaService {
   setEnabled(kind: 'audio' | 'video', enabled: boolean): void {
     const tracks = kind === 'audio' ? this.stream()?.getAudioTracks() : this.stream()?.getVideoTracks();
     tracks?.forEach((t) => (t.enabled = enabled));
+    this.updateState();
   }
 
   hasTrack(kind: 'audio' | 'video'): boolean {
     const s = this.stream();
-    return !!s && (kind === 'audio' ? s.getAudioTracks().length > 0 : s.getVideoTracks().length > 0);
+    return !!s && s.getTracks().some((t) => t.kind === kind && t.readyState === 'live');
   }
 
   /** Pide al usuario elegir una pantalla/ventana. Cancelar el selector deja todo igual. */
@@ -124,6 +129,7 @@ export class MediaService {
       ?.getTracks()
       .forEach((t) => t.stop());
     this.stream.set(null);
+    this.updateState();
     if (this.permission() === 'granted' || this.permission() === 'requesting') this.permission.set('idle');
   }
 
@@ -136,7 +142,26 @@ export class MediaService {
       ?.getTracks()
       .filter((t) => kinds.has(t.kind))
       .forEach((t) => t.stop());
+    for (const track of next.getTracks()) {
+      track.addEventListener('ended', () => {
+        const current = this.stream();
+        if (current?.getTracks().includes(track))
+          this.stream.set(new MediaStream(current.getTracks().filter((t) => t.readyState === 'live')));
+        this.updateState();
+      });
+      track.addEventListener('mute', () => this.updateState());
+      track.addEventListener('unmute', () => this.updateState());
+    }
     this.stream.set(new MediaStream([...kept, ...next.getTracks()]));
+    this.updateState();
     this.permission.set('granted');
+  }
+  private updateState(): void {
+    const active = (kind: string) =>
+      !!this.stream()
+        ?.getTracks()
+        .some((t) => t.kind === kind && t.readyState === 'live' && t.enabled && !t.muted);
+    this.audioEnabled.set(active('audio'));
+    this.videoEnabled.set(active('video'));
   }
 }

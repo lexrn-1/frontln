@@ -17,6 +17,7 @@ export interface RoomChat {
   messages: ChatMessage[];
   state: LoadState;
   error: string | null;
+  historyError: string | null;
   /** Cursor de mensajes anteriores; `null` si no hay más. */
   nextCursor: string | null;
   loadingOlder: boolean;
@@ -28,6 +29,7 @@ const EMPTY: RoomChat = {
   messages: [],
   state: 'idle',
   error: null,
+  historyError: null,
   nextCursor: null,
   loadingOlder: false,
   sending: false,
@@ -72,7 +74,9 @@ export class ChatStore {
         const message = toMessage(event.message, this.user.profile()?.uid ?? null);
         this.receive(event.roomId, message);
       } else if (event.type === REALTIME_EVENTS.snapshot && this.activeRoom === event.roomId) {
-        void this.recover(event.roomId);
+        if (this.chatOf(event.roomId).historyError || this.chatOf(event.roomId).state === 'error')
+          void this.open(event.roomId);
+        else void this.recover(event.roomId);
       } else if (event.type === REALTIME_EVENTS.roomDeleted) {
         this.patch(event.roomId, {
           state: 'error',
@@ -138,8 +142,8 @@ export class ChatStore {
     }
     if (epoch !== this.epoch) return;
     const current = this.rooms()[roomId];
-    if (!current || current.state === 'idle' || current.state === 'error') {
-      this.patch(roomId, { state: 'loading', error: null });
+    if (!current || current.state === 'idle' || current.state === 'error' || current.historyError) {
+      this.patch(roomId, { state: 'loading', error: null, historyError: null });
       try {
         if (!this.isDemo) await this.realtime.enter(roomId);
         const page = await firstValueFrom(this.api.listMessages(roomId, { limit: runtimeConfig.chat.pageSize }));
@@ -148,18 +152,27 @@ export class ChatStore {
           messages: this.merge(this.rooms()[roomId]?.messages ?? [], page.messages),
           nextCursor: page.nextCursor,
           state: 'ready',
+          historyError: null,
         });
       } catch (error) {
         if (epoch !== this.epoch) return;
+        const live = this.canSend(roomId);
         this.patch(roomId, {
-          state: 'error',
-          error: AppError.from(error).message,
+          state: live ? 'ready' : 'error',
+          error: live ? null : AppError.from(error).message,
+          historyError: live ? AppError.from(error).message : null,
         });
         return;
       }
     }
     if (!this.isDemo) await this.recover(roomId);
     await this.markRead(roomId);
+  }
+
+  canSend(roomId: string): boolean {
+    return this.isDemo
+      ? this.chatOf(roomId).state === 'ready'
+      : this.realtime.status() === 'connected' && this.realtime.snapshot()?.roomId === roomId;
   }
 
   close(roomId: string): void {
@@ -192,7 +205,7 @@ export class ChatStore {
       if (epoch !== this.epoch) return;
       this.patch(roomId, {
         loadingOlder: false,
-        sendError: AppError.from(error).message,
+        historyError: AppError.from(error).message,
       });
     }
   }
@@ -295,9 +308,10 @@ export class ChatStore {
           after = page.nextCursor ?? undefined;
         } while (after && this.activeRoom === roomId);
       }
+      if (epoch === this.epoch) this.patch(roomId, { historyError: null });
     } catch (error) {
       if (epoch !== this.epoch) return;
-      this.patch(roomId, { sendError: AppError.from(error).message });
+      this.patch(roomId, { historyError: AppError.from(error).message });
     } finally {
       this.recovering.delete(roomId);
     }

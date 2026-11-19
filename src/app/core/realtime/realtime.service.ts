@@ -180,6 +180,8 @@ export class SocketRealtimeService extends RealtimeService {
     const socket = io(runtimeConfig.realtimeUrl, {
       path: runtimeConfig.socketPath,
       autoConnect: false,
+      transports: ['websocket', 'polling'],
+      tryAllTransports: true,
       reconnection: true,
       reconnectionDelayMax: 5000,
       auth: (callback) => {
@@ -310,8 +312,10 @@ export class SocketRealtimeService extends RealtimeService {
             void this.request('room:leave', roomId, {}).catch(() => undefined);
           throw new AppError('cancelled', 'Entrada a la sala cancelada');
         }
-        this.snapshot.set(snapshot);
-        return snapshot;
+        // room:snapshot is delivered before the ack. Preserve any participant/media
+        // deltas already applied while that acknowledgement was in flight.
+        if (this.snapshot()?.connectionId !== snapshot.connectionId) this.snapshot.set(snapshot);
+        return this.snapshot()!;
       })
       .catch((error) => {
         if (this.desired === roomId) this.desired = null;

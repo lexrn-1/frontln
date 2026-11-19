@@ -1,15 +1,15 @@
+import { AppError } from '../../http/app-error';
 import { RoomsService, HttpRoomsService } from '../../rooms/services/rooms.service';
 import { Room } from '../../rooms/models/room.models';
 import { RealtimeService } from '../../realtime/realtime.service';
 import { toneFor } from '../models/chat.mapper';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpParams, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, map, from, of } from 'rxjs';
+import { Observable, map, from, of, catchError, throwError } from 'rxjs';
 
 import { CurrentUser } from '../../auth/store/current-user.store';
 import { apiRoutes } from '../../config/api-routes';
 import { runtimeConfig } from '../../config/runtime-config';
-import { whenEnabled } from '../../http/feature-flag';
 import { ConversationDto, MessageDto, MessagePageDto, SendMessageRequestDto, UnreadCountDto } from '../models/chat.dto';
 import { toConversation, toMessage, toMessagePage } from '../models/chat.mapper';
 import { ChatMessage, Conversation, MessagePage, MessageQuery, SendMessageRequest } from '../models/chat.models';
@@ -26,7 +26,7 @@ export abstract class ChatService {
   abstract unreadCount(): Observable<number>;
 }
 
-/** Adaptador HTTP del contrato propuesto; inactivo (`contract-pending`) hasta `features.chatApi`. */
+/** Historial REST con recuperación por Socket.IO; envío persistente mediante ack. */
 @Injectable()
 export class HttpChatService extends ChatService {
   readonly isDemo = false;
@@ -66,7 +66,21 @@ export class HttpChatService extends ChatService {
       .get<MessagePageDto>(`${this.base}${apiRoutes.roomMessages(roomId)}`, {
         params,
       })
-      .pipe(map((page) => toMessagePage(page, this.uid)));
+      .pipe(
+        // A shared gateway may still route history to API. Use the same authenticated
+        // realtime application port; never turn authentication/permission failures into retries.
+        catchError((error: unknown) => {
+          if (!(error instanceof HttpErrorResponse || error instanceof AppError) || ![404, 405].includes(error.status))
+            return throwError(() => error);
+          const payload = {
+            limit: query.limit,
+            ...(query.before ? { before: query.before } : {}),
+            ...(query.after ? { after: query.after } : {}),
+          };
+          return from(this.realtime.request<MessagePageDto>('chat:history', roomId, payload));
+        }),
+        map((page) => toMessagePage(page, this.uid))
+      );
   }
   sendMessage(roomId: string, request: SendMessageRequest): Observable<ChatMessage> {
     return from(

@@ -116,6 +116,12 @@ import { ConversationListComponent } from './components/conversation-list.compon
             >
           </header>
 
+          @if (room().historyError) {
+            <p role="status" class="mt-2 text-xs text-warning">
+              No pudimos recuperar el historial. Puedes seguir enviando mensajes.
+              <button type="button" class="underline" (click)="chat.open(roomId()!)">Reintentar historial</button>
+            </p>
+          }
           <div class="min-h-0 flex-1 py-4">
             <h2 class="sr-only">Mensajes</h2>
             <app-message-list
@@ -135,7 +141,7 @@ import { ConversationListComponent } from './components/conversation-list.compon
             [limits]="limits"
             [sending]="room().sending"
             [error]="room().sendError"
-            [disabled]="room().state !== 'ready'"
+            [disabled]="!chat.canSend(roomId()!)"
             (send)="send($event)"
           />
         }

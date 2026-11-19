@@ -217,7 +217,7 @@ export class MessageComposerComponent implements OnDestroy {
   protected submit(): void {
     const text = this.form.controls.text.value.trim();
     const files = this.selected().map((s) => s.file);
-    if ((!text && files.length === 0) || this.sending()) return;
+    if (this.disabled() || (!text && files.length === 0) || this.sending()) return;
     this.awaiting = true;
     this.send.emit({ text, files });
   }

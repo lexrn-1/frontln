@@ -133,8 +133,8 @@ export class WebRtcPeerConnectionsService extends PeerConnectionsService {
         this.status.set('connecting');
       });
     });
-    peer.on('stream', (stream) => this.remoteStreams.update((map) => new Map(map).set(id, stream)));
-    peer.on('track', (_track, stream) => this.remoteStreams.update((map) => new Map(map).set(id, stream)));
+    peer.on('stream', (stream) => this.publishTracks(id, stream.getTracks()));
+    peer.on('track', (track, stream) => this.publishTracks(id, [...stream.getTracks(), track]));
     peer.on('connect', () => this.status.set('connected'));
     peer.on('error', () => {
       this.remove(id);
@@ -145,6 +145,15 @@ export class WebRtcPeerConnectionsService extends PeerConnectionsService {
     });
     for (const signal of this.waiting.get(id) ?? []) peer.signal(signal);
     this.waiting.delete(id);
+  }
+  private publishTracks(id: string, tracks: MediaStreamTrack[]): void {
+    if (!this.links.has(id)) return;
+    const previous = this.remoteStreams().get(id)?.getTracks() ?? [];
+    const merged = new Map(
+      [...previous, ...tracks].filter((track) => track.readyState === 'live').map((track) => [track.id, track])
+    );
+    const stream = new MediaStream([...merged.values()]);
+    this.remoteStreams.update((map) => new Map(map).set(id, stream));
   }
   private updateTracks(link: Link): void {
     if (link.peer.destroyed) return;

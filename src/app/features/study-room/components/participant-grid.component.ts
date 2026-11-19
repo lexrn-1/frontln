@@ -36,6 +36,7 @@ const TILE_TONES: Record<ParticipantTone, string> = {
           [class.rounded-3xl]="!compact()"
           [class.rounded-2xl]="compact()"
           [class]="tone(p) + (layout() === 'spotlight' && first ? ' col-span-3' : '')"
+          [attr.data-connection-id]="p.id"
           [attr.aria-label]="
             p.fullName +
             (p.isSelf ? ' (tú)' : '') +
@@ -89,7 +90,7 @@ const TILE_TONES: Record<ParticipantTone, string> = {
               (compact()
                 ? 'bottom-1.5 right-1.5 h-6 w-6 '
                 : 'bottom-2 right-2 h-7 w-7 sm:bottom-3.5 sm:right-4 sm:h-9 sm:w-9 ') +
-              (p.micOn ? 'text-ink' : 'text-danger')
+              (p.micOn ? 'text-success' : 'text-danger')
             "
             aria-hidden="true"
           >
